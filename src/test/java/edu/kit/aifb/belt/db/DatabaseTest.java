@@ -1,5 +1,7 @@
 package edu.kit.aifb.belt.db;
 
+import java.util.Arrays;
+
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -15,6 +17,5 @@ public class DatabaseTest {
 
 	@Test
 	public void test() {
-
 	}
 }
