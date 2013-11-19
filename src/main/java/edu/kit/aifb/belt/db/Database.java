@@ -60,11 +60,11 @@ public class Database {
 
 			connection = DriverManager.getConnection("jdbc:mysql://" + host, user, password);
 			insertQStatement = connection
-					.prepareStatement("INSERT INTO belt (history, action, future, q, updateCount) VALUES (?, ?, ?, ?, ?)");
+					.prepareStatement("INSERT INTO QTable (history, action, future, q, updateCount) VALUES (?, ?, ?, ?, ?)");
 			updateQStatement = connection
-					.prepareStatement("UPDATE belt SET q = ?, updateCount = ? WHERE history = ? AND action = ? AND future = ?");
+					.prepareStatement("UPDATE QTable SET q = ?, updateCount = ? WHERE history = ? AND action = ? AND future = ?");
 			getQStatement = connection
-					.prepareStatement("SELECT q, updateCount FROM belt WHERE history = ? AND action = ? AND future = ?");
+					.prepareStatement("SELECT q, updateCount FROM QTable WHERE history = ? AND action = ? AND future = ?");
 		} catch (ClassNotFoundException e) {
 			throw new DatabaseException("Could not find driver: " + DRIVER, e);
 		} catch (SQLException e) {
@@ -86,6 +86,12 @@ public class Database {
 	}
 
 	public void updateQ(Collection<QValue> qs) {
+		for (QValue q : qs) {
+			updateQ(q);
+		}
+	}
+
+	public void updateQ(QValue... qs) {
 		for (QValue q : qs) {
 			updateQ(q);
 		}
@@ -140,7 +146,7 @@ public class Database {
 			getQStatement.setString(3, q.getFuture().toString());
 
 			ResultSet result = getQStatement.executeQuery();
-			
+
 			if (result.next()) {
 				q.setQ(result.getDouble(1));
 				return true;

@@ -5,7 +5,7 @@ package edu.kit.aifb.belt.learner;
 
 /**
  * @author janscheurenbrand
- *
+ * 
  */
 public class Main {
 
