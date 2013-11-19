@@ -5,4 +5,16 @@
   <version>0.0.1-SNAPSHOT</version>
   <name>belt</name>
   <description>Best-Effort Link-Traversal</description>
+  <dependencies>
+  	<dependency>
+  		<groupId>mysql</groupId>
+  		<artifactId>mysql-connector-java</artifactId>
+  		<version>5.1.27</version>
+  	</dependency>
+  	<dependency>
+  		<groupId>junit</groupId>
+  		<artifactId>junit</artifactId>
+  		<version>4.11</version>
+  	</dependency>
+  </dependencies>
 </project>
