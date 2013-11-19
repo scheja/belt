@@ -37,4 +37,26 @@ public class DatabaseTest {
 		assertTrue("Q must be 3 but was: " + x.getQ(), x.getQ() == 3);
 		assertTrue("Q must be 2 but was: " + y.getQ(), y.getQ() == 2);
 	}
+	
+	@Test
+	public void testStateSorting() {
+		QValue x = new QValue(new StateChain(new State("past1", "past2"), new State("pastx"), new State("pasty")),
+				new Action("abc.de", "knows"), new StateChain(new State("future1", "future2"), new State("futurex"),
+						new State("futurey")), 3);
+
+		QValue y = new QValue(new StateChain(new State("past2", "past1"), new State("pastx"), new State("pasty")),
+				new Action("abc.de", "knows"), new StateChain(new State("future2", "future1"), new State("futurex"),
+						new State("futurey")), 2);
+
+		db.updateQ(x, y);
+
+		x.setQ(-5);
+		y.setQ(-5);
+
+		db.getQ(x);
+		db.getQ(y);
+
+		assertTrue("Q must be 3 but was: " + x.getQ(), x.getQ() == 2);
+		assertTrue("Q must be 2 but was: " + y.getQ(), y.getQ() == 2);
+	}
 }

@@ -1,14 +1,14 @@
 package edu.kit.aifb.belt.db;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
-import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
+import com.google.common.collect.Multiset.Entry;
 
 /**
  * A state in the decision graph.
@@ -33,10 +33,13 @@ public class State {
 	}
 
 	public String toString() {
+		List<Entry<String>> entries = new ArrayList<Entry<String>>(properties.entrySet().size());
+		entries.addAll(properties.entrySet());
+		Collections.sort(entries, EntryComparator.getComparator());
 		StringBuilder str = new StringBuilder();
 
-		for (String s : properties) {
-			str.append(s).append(SEPARATOR);
+		for (Entry<String> s : entries) {
+			str.append(s.getElement()).append(SEPARATOR);
 		}
 
 		return str.toString();
