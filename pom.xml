@@ -5,4 +5,44 @@
   <version>0.0.1-SNAPSHOT</version>
   <name>belt</name>
   <description>Best-Effort Link-Traversal</description>
+  <dependencies>
+
+    
+
+    <dependency>
+      <groupId>net.rootdev</groupId>
+      <artifactId>java-rdfa-htmlparser</artifactId>
+      <version>0.4.2</version>
+      <optional>true</optional>
+      <type>pom</type>
+    </dependency>
+
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.11</version>
+    </dependency>
+
+    <dependency>
+    	<groupId>net.rootdev</groupId>
+    	<artifactId>java-rdfa</artifactId>
+    	<version>0.4.2</version>
+    </dependency>
+ 
+  	<dependency>
+  		<groupId>org.apache.jena</groupId>
+  		<artifactId>jena-arq</artifactId>
+  		<version>2.9.1</version>
+  	</dependency>
+  	<dependency>
+  		<groupId>org.apache.jena</groupId>
+  		<artifactId>jena-tdb</artifactId>
+  		<version>1.0.0</version>
+  	</dependency>
+  	<dependency>
+  		<groupId>org.slf4j</groupId>
+  		<artifactId>slf4j-api</artifactId>
+  		<version>1.6.0</version>
+  	</dependency>
+  </dependencies>
 </project>
