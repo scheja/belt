@@ -25,6 +25,8 @@ public class Database {
 	private PreparedStatement insertQStatement;
 	private PreparedStatement updateQStatement;
 	private PreparedStatement getQStatement;
+	
+	private long size;
 
 	public Database(String host) {
 		this.host = host;
@@ -125,6 +127,9 @@ public class Database {
 				insertQStatement.setInt(5, 0);
 
 				insertQStatement.execute();
+				
+				// Increase size: 3 equals two ids for action and one double for Q.
+				size += (q.getHistory().size() + 3 + q.getFuture().size()) << 3;
 			}
 
 			result.close();
@@ -149,12 +154,23 @@ public class Database {
 
 			if (result.next()) {
 				q.setQ(result.getDouble(1));
+				
+				result.close();
 				return true;
 			} else {
+				result.close();
 				return false;
 			}
 		} catch (SQLException e) {
 			throw new DatabaseException("Error while fetching q value.", e);
 		}
+	}
+	
+	/**
+	 * Returns the size of the stored values in byte.
+	 * @return The size of the stored values in byte.
+	 */
+	public long getSize() {
+		return size;
 	}
 }

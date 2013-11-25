@@ -30,4 +30,8 @@ public class StateChain {
 
 		return str.toString();
 	}
+
+	public int size() {
+		return states.size();
+	}
 }
