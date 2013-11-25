@@ -19,13 +19,27 @@ public class State {
 	private static final String SEPARATOR = "§";
 
 	private Multiset<String> properties = HashMultiset.create();
-
-	public State(Collection<String> properties) {
-		this.properties.addAll(properties);
+	private String domain;
+	public String getDomain() {
+		return domain;
 	}
 
-	public State(String... properties) {
+	public String getType() {
+		return type;
+	}
+
+	private String type;
+
+	public State(String domain, String type, Collection<String> properties) {
+		this.properties.addAll(properties);
+		this.domain = domain;
+		this.type = type;
+	}
+
+	public State(String domain, String type, String... properties) {
 		this.properties.addAll(Arrays.asList(properties));
+		this.domain = domain;
+		this.type = type;
 	}
 
 	public Multiset<String> getProperties() {
