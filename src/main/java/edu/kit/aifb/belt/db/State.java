@@ -20,14 +20,6 @@ public class State {
 
 	private Multiset<String> properties = HashMultiset.create();
 	private String domain;
-	public String getDomain() {
-		return domain;
-	}
-
-	public String getType() {
-		return type;
-	}
-
 	private String type;
 
 	public State(String domain, String type, Collection<String> properties) {
@@ -52,10 +44,26 @@ public class State {
 		Collections.sort(entries, EntryComparator.getComparator());
 		StringBuilder str = new StringBuilder();
 
+		if (domain != null) {
+			str.append(domain).append(SEPARATOR);
+		}
+		
+		if (type != null) {
+			str.append(type).append(SEPARATOR);
+		}
+		
 		for (Entry<String> s : entries) {
 			str.append(s.getElement()).append(SEPARATOR);
 		}
 
 		return str.toString();
+	}
+
+	public String getDomain() {
+		return domain;
+	}
+
+	public String getType() {
+		return type;
 	}
 }
