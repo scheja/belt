@@ -72,7 +72,7 @@ public class OpExecutor extends com.hp.hpl.jena.sparql.engine.main.OpExecutor
 		Iterator<SolutionMapping> qIt = new EncodeBindingsIterator( input, ourExecCxt );
 		for ( com.hp.hpl.jena.graph.Triple t : opBGP.getPattern().getList() ) {
 			qIt = new TriplePatternQueryIter( encode(t,varDict,nodeDict), qIt, ourExecCxt );
-		}
+		}		
 
 		return new DecodeBindingsIterator( qIt, ourExecCxt );
 	}

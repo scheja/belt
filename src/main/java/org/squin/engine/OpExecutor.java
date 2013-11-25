@@ -7,7 +7,6 @@ package org.squin.engine;
 import java.util.Iterator;
 
 import com.hp.hpl.jena.graph.Triple;
-
 import com.hp.hpl.jena.sparql.algebra.op.OpBGP;
 import com.hp.hpl.jena.sparql.engine.ExecutionContext;
 import com.hp.hpl.jena.sparql.engine.QueryIterator;
@@ -17,7 +16,7 @@ import org.squin.dataset.jenacommon.NodeDictionary;
 import org.squin.dataset.query.SolutionMapping;
 import org.squin.dataset.query.arq.iterators.DecodeBindingsIterator;
 import org.squin.dataset.query.arq.iterators.EncodeBindingsIterator;
-
+import org.squin.dataset.query.arq.iterators.TriplePatternQueryIter;
 import org.squin.dataset.query.arq.VarDictionary;
 
 
@@ -67,12 +66,18 @@ public class OpExecutor extends org.squin.dataset.query.arq.OpExecutor
 		LinkTraversalBasedExecutionContext ltbExecCxt = (LinkTraversalBasedExecutionContext) execCxt;
 		VarDictionary varDict = ltbExecCxt.varDict;
 		NodeDictionary nodeDict = ltbExecCxt.nodeDict;
+		
+		
+		System.out.println("New Step:");
+		System.out.println("opBGP Pattern: "+ opBGP.getPattern().toString());		
+		System.out.println("QueryIterator: "+ input.toString());
 
 		Iterator<SolutionMapping> qIt = new EncodeBindingsIterator( input, ltbExecCxt );
 		for ( Triple t : opBGP.getPattern().getList() ) {
 // 			qIt = new NaiveTriplePatternQueryIter( encode(t,varDict,nodeDict), qIt, ltbExecCxt );
 // 			qIt = new PrefetchingTriplePatternQueryIter( encode(t,varDict,nodeDict), qIt, ltbExecCxt );
 			qIt = new PostponingTriplePatternQueryIter( encode(t,varDict,nodeDict), qIt, ltbExecCxt );
+			System.out.println("Created TPQI for Triple: " + t.toString());
 		}
 
 		return new DecodeBindingsIterator( qIt, ltbExecCxt );

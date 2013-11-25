@@ -4,10 +4,9 @@
 */
 package org.squin.lookup.deref.impl;
 
-import java.io.InputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URL;
@@ -31,8 +30,12 @@ import org.squin.lookup.deref.DataAnalyzer;
 import org.squin.lookup.deref.DereferencingResult;
 import org.squin.lookup.deref.DiscoveredURI;
 import org.squin.lookup.deref.URIDerefContext;
+import org.squin.lookup.deref.jenaimpl.JenaIOBasedDerefContext;
+import org.squin.lookup.deref.jenaimpl.JenaIOBasedDerefTask.TripleMaterializer;
 
-import edu.kit.aifb.belt.learner.URIRetriever;
+import com.hp.hpl.jena.sparql.core.Quad;
+
+import edu.kit.aifb.belt.sourceindex.DataRetrieverIterator;
 import edu.kit.aifb.belt.sourceindex.SourceIndex;
 
 
@@ -162,6 +165,28 @@ abstract public class DerefTaskBase extends TaskBase<DereferencingResult>
 	public DereferencingResult call ()
 	{
 		log.debug( "Started to dereference the URI <{}> (ID: {}).", url.toString(), uriID );
+		
+		SourceIndex si = new SourceIndex();
+		Iterator<Quad> res = si.findAllByURI(url.toString());
+		int counter = 0;
+		TripleMaterializer tm = new TripleMaterializer( ((JenaIOBasedDerefContext) derefCxt).nodeDict );
+		
+		while ( res.hasNext() ) {
+			Quad q = res.next();
+			tm.send(q.asTriple());
+			counter++;
+		}
+		
+		if (counter > 0) {
+			importer.importData( tm.triples.iterator(), new SimpleRDFGraphProvenanceImpl(url) );
+			System.out.println("Loaded " + counter + " triples from the sourceindex.");
+			return new DataRetrieved( uriID,
+                    getTimestamp(),
+                    getExecutionStartTimestamp(),
+                    null,
+                    null,
+                    null);
+		}
 
 		try {
 			HttpURLConnection con = getConnection();
@@ -324,6 +349,9 @@ abstract public class DerefTaskBase extends TaskBase<DereferencingResult>
 		Set<DiscoveredURI> discoveredURIs;
 		try {
 			discoveredURIs = handleContent( con.getInputStream(), con.getContentType(), con.getContentEncoding() );
+			
+			// New
+			DataRetrieverIterator.addURL(url.toString());
 		}
 		catch ( SocketTimeoutException e ) {
 			String errmsg = "Reading the content retrieved for URI <" + url.toString() + "> (ID: " + uriID + ") timed out.";
@@ -472,7 +500,9 @@ abstract public class DerefTaskBase extends TaskBase<DereferencingResult>
 		if ( log.isDebugEnabled() ) {
 			it = new TripleCountingIterator( it );
 		}
-
+		
+		it = new DataRetrieverIterator(it, src, derefCxt);
+		
 		importer.importData( it, new SimpleRDFGraphProvenanceImpl(src) );
 	}
 
