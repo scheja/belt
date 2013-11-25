@@ -66,4 +66,12 @@ public class State {
 	public String getType() {
 		return type;
 	}
+
+	/**
+	 * Returns a copy of this state without domain and type.
+	 * @return A copy of this state without domain and type.
+	 */
+	public State getCleanCopy() {
+		return new State(null, null, properties);
+	}
 }

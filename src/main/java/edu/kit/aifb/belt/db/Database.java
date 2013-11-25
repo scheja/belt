@@ -25,9 +25,13 @@ public class Database {
 	private PreparedStatement insertQStatement;
 	private PreparedStatement updateQStatement;
 	private PreparedStatement getQStatement;
-	
+	private PreparedStatement getBestActionQStatement;
+
 	private long size;
 
+	/**
+	 * @param host Format: domain/dbname.
+	 */
 	public Database(String host) {
 		this.host = host;
 
@@ -46,10 +50,17 @@ public class Database {
 		}
 	}
 
-	public Database(String host, String database, String user, String password) {
+	public Database(String host, String user, String password) {
 		this.host = host;
 		this.user = user;
 		this.password = password;
+	}
+	
+	/**
+	 * Returns a new {@code Database} object with the same host, user and password. The new object is not connected.
+	 */
+	public Database clone() {
+		return new Database(host, user, password);
 	}
 
 	public void connect() {
@@ -67,6 +78,8 @@ public class Database {
 					.prepareStatement("UPDATE QTable SET q = ?, updateCount = ? WHERE history = ? AND action = ? AND future = ?");
 			getQStatement = connection
 					.prepareStatement("SELECT q, updateCount FROM QTable WHERE history = ? AND action = ? AND future = ?");
+			getBestActionQStatement = connection
+					.prepareStatement("SELECT q FROM QTable WHERE history = ? ORDER BY q DESC LIMIT 1");
 		} catch (ClassNotFoundException e) {
 			throw new DatabaseException("Could not find driver: " + DRIVER, e);
 		} catch (SQLException e) {
@@ -127,8 +140,9 @@ public class Database {
 				insertQStatement.setInt(5, 0);
 
 				insertQStatement.execute();
-				
-				// Increase size: 3 equals two ids for action and one double for Q.
+
+				// Increase size: 3 equals two ids for action and one double for
+				// q.
 				size += (q.getHistory().size() + 3 + q.getFuture().size()) << 3;
 			}
 
@@ -154,7 +168,7 @@ public class Database {
 
 			if (result.next()) {
 				q.setQ(result.getDouble(1));
-				
+
 				result.close();
 				return true;
 			} else {
@@ -165,9 +179,34 @@ public class Database {
 			throw new DatabaseException("Error while fetching q value.", e);
 		}
 	}
-	
+
+	/**
+	 * Returns the best available q value for the given history.
+	 * @param history The history.
+	 * @return The best available q value for the given history, or NaN, if no q value was found.
+	 */
+	public double getBestQ(StateChain history) {
+		try {
+			getBestActionQStatement.setString(1, history.toString());
+
+			ResultSet result = getBestActionQStatement.executeQuery();
+			
+			if (result.next()) {
+				double q = result.getDouble(1);
+				result.close();
+				return q;
+			} else {
+				result.close();
+				return Double.NaN;
+			}
+		} catch (SQLException e) {
+			throw new DatabaseException("Error while fetching best q value.", e);
+		}
+	}
+
 	/**
 	 * Returns the size of the stored values in byte.
+	 * 
 	 * @return The size of the stored values in byte.
 	 */
 	public long getSize() {
