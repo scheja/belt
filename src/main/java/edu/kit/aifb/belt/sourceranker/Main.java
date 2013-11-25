@@ -5,7 +5,7 @@ package edu.kit.aifb.belt.sourceranker;
 
 /**
  * @author janscheurenbrand
- *
+ * 
  */
 public class Main {
 
