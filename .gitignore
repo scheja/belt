@@ -1,2 +1,4 @@
 /target
+/tdb/*
+.DS_Store
 .password
