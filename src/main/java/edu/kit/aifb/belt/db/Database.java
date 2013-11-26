@@ -5,9 +5,21 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.sql.PreparedStatement;
+
+import com.google.common.collect.AbstractIterator;
+
+import edu.kit.aifb.belt.db.dict.StringDictionary;
+import edu.kit.aifb.belt.db.dict.StringDictionary.Entry;
 
 /**
  * Connects to the database, provides standard functionality.
@@ -16,6 +28,8 @@ import java.sql.PreparedStatement;
  */
 public class Database {
 	private static final String DRIVER = "com.mysql.jdbc.Driver";
+
+	private static final int BATCH_SIZE = 100;
 
 	private String host;
 	private String user;
@@ -26,11 +40,15 @@ public class Database {
 	private PreparedStatement updateQStatement;
 	private PreparedStatement getQStatement;
 	private PreparedStatement getBestActionQStatement;
+	private PreparedStatement insertDictStatement;
+
+	private StringDictionary stateDict = new StringDictionary();
 
 	private long size;
 
 	/**
-	 * @param host Format: domain/dbname.
+	 * @param host
+	 *            Format: domain/dbname.
 	 */
 	public Database(String host) {
 		this.host = host;
@@ -55,9 +73,10 @@ public class Database {
 		this.user = user;
 		this.password = password;
 	}
-	
+
 	/**
-	 * Returns a new {@code Database} object with the same host, user and password. The new object is not connected.
+	 * Returns a new {@code Database} object with the same host, user and
+	 * password. The new object is not connected.
 	 */
 	public Database clone() {
 		return new Database(host, user, password);
@@ -72,6 +91,12 @@ public class Database {
 			Class.forName(DRIVER);
 
 			connection = DriverManager.getConnection("jdbc:mysql://" + host, user, password);
+
+			// Create tables
+			Statement stmt = connection.createStatement();
+			stmt.execute("CREATE TABLE IF NOT EXISTS QTable (id INT PRIMARY KEY AUTO_INCREMENT, history BIGINT, action BIGINT, future BIGINT, q DOUBLE, updateCount INT)");
+			stmt.execute("CREATE TABLE IF NOT EXISTS DictionaryTable (id BIGINT PRIMARY KEY, value TEXT)");
+
 			insertQStatement = connection
 					.prepareStatement("INSERT INTO QTable (history, action, future, q, updateCount) VALUES (?, ?, ?, ?, ?)");
 			updateQStatement = connection
@@ -80,6 +105,29 @@ public class Database {
 					.prepareStatement("SELECT q, updateCount FROM QTable WHERE history = ? AND action = ? AND future = ?");
 			getBestActionQStatement = connection
 					.prepareStatement("SELECT q FROM QTable WHERE history = ? ORDER BY q DESC LIMIT 1");
+
+			insertDictStatement = connection.prepareStatement("INSERT IGNORE INTO DictionaryTable (?, ?)");
+
+			final ResultSet dict = stmt.executeQuery("SELECT id, value FROM DictionaryTable");
+
+			stateDict.load(new AbstractIterator<Entry>() {
+				@Override
+				protected Entry computeNext() {
+					try {
+						if (dict.next()) {
+							return stateDict.new Entry(dict.getLong(1), dict.getString(2));
+						} else {
+							return endOfData();
+						}
+					} catch (SQLException e) {
+						Logger.getLogger(getClass().getName()).log(Level.WARNING, "Couldn't load dictionary", e);
+
+						return endOfData();
+					}
+				}
+			});
+
+			dict.close();
 		} catch (ClassNotFoundException e) {
 			throw new DatabaseException("Could not find driver: " + DRIVER, e);
 		} catch (SQLException e) {
@@ -92,12 +140,35 @@ public class Database {
 			return;
 		}
 
+		flushDictionary();
+
 		try {
 			connection.close();
 			connection = null;
 		} catch (SQLException e) {
 			throw new DatabaseException("Could not close database connection", e);
 		}
+	}
+
+	public void flushDictionary() {
+		Iterator<Long> entries = stateDict.getNewIds().iterator();
+
+		try {
+			while (entries.hasNext()) {
+				for (int i = 0; i < BATCH_SIZE && entries.hasNext(); i++) {
+					long entry = entries.next();
+					insertDictStatement.setLong(1, entry);
+					insertDictStatement.setString(2, stateDict.getString(entry));
+					insertDictStatement.addBatch();
+				}
+				
+				insertDictStatement.executeBatch();
+			}
+		} catch (SQLException e) {
+			throw new DatabaseException("Could not flush dictionary.", e);
+		}
+		
+		stateDict.clearNewIds();
 	}
 
 	public void updateQ(Collection<QValue> qs) {
@@ -182,15 +253,18 @@ public class Database {
 
 	/**
 	 * Returns the best available q value for the given history.
-	 * @param history The history.
-	 * @return The best available q value for the given history, or NaN, if no q value was found.
+	 * 
+	 * @param history
+	 *            The history.
+	 * @return The best available q value for the given history, or NaN, if no q
+	 *         value was found.
 	 */
 	public double getBestQ(StateChain history) {
 		try {
 			getBestActionQStatement.setString(1, history.toString());
 
 			ResultSet result = getBestActionQStatement.executeQuery();
-			
+
 			if (result.next()) {
 				double q = result.getDouble(1);
 				result.close();
