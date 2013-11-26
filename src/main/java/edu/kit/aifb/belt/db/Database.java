@@ -7,6 +7,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Properties;
@@ -14,16 +15,19 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.google.common.collect.AbstractIterator;
+import com.hp.hpl.jena.graph.Node;
+import com.hp.hpl.jena.sparql.core.Quad;
 
 import edu.kit.aifb.belt.db.dict.StringDictionary;
 import edu.kit.aifb.belt.db.dict.StringDictionary.Entry;
+import edu.kit.aifb.belt.sourceindex.SourceIndex;
 
 /**
  * Connects to the database, provides standard functionality.
  * 
  * @author sibbo
  */
-public class Database {
+public class Database implements SourceIndex {
 	private static final String DRIVER = "com.mysql.jdbc.Driver";
 
 	private static final int BATCH_SIZE = 100;
@@ -37,7 +41,13 @@ public class Database {
 	private PreparedStatement updateQStatement;
 	private PreparedStatement getQStatement;
 	private PreparedStatement getBestActionQStatement;
+
 	private PreparedStatement insertDictStatement;
+
+	private PreparedStatement insertQuadStatement;
+	private PreparedStatement getQuadStatement;
+	private PreparedStatement getQuadByContextStatement;
+	private PreparedStatement replaceQuadContextStatement;
 
 	private StringDictionary dict = new StringDictionary();
 
@@ -93,6 +103,7 @@ public class Database {
 			Statement stmt = connection.createStatement();
 			stmt.execute("CREATE TABLE IF NOT EXISTS QTable (id INT PRIMARY KEY AUTO_INCREMENT, history BLOB, action BLOB, future BLOB, q DOUBLE, updateCount INT)");
 			stmt.execute("CREATE TABLE IF NOT EXISTS DictionaryTable (id BIGINT PRIMARY KEY, value TEXT)");
+			stmt.execute("CREATE TABLE IF NOT EXISTS SourceIndexTable (id INT PRIMARY KEY AUTO_INCREMENT, subject BIGINT, predicate BIGINT, object BIGINT, context BIGINT)");
 
 			insertQStatement = connection
 					.prepareStatement("INSERT INTO QTable (history, action, future, q, updateCount) VALUES (?, ?, ?, ?, ?)");
@@ -104,6 +115,15 @@ public class Database {
 					.prepareStatement("SELECT q FROM QTable WHERE history = ? ORDER BY q DESC LIMIT 1");
 
 			insertDictStatement = connection.prepareStatement("INSERT IGNORE INTO DictionaryTable (?, ?)");
+
+			insertQuadStatement = connection
+					.prepareStatement("INSERT INTO SourceIndexTable (subject, predicate, object, context) VALUES (?, ?, ?, ?)");
+			getQuadStatement = connection
+					.prepareStatement("SELECT * FROM SourceIndexTable WHERE subject = ? AND predicate = ? AND object = ? and context = ?");
+			getQuadByContextStatement = connection
+					.prepareStatement("SELECT subject, predicate, object, context FROM SourceIndexTable WHERE context = ?");
+			replaceQuadContextStatement = connection
+					.prepareStatement("UPDATE SourceIndexTable SET context = ? WHERE context = ?");
 
 			final ResultSet entries = stmt.executeQuery("SELECT id, value FROM DictionaryTable");
 
@@ -125,6 +145,7 @@ public class Database {
 			});
 
 			entries.close();
+			stmt.close();
 		} catch (ClassNotFoundException e) {
 			throw new DatabaseException("Could not find driver: " + DRIVER, e);
 		} catch (SQLException e) {
@@ -181,8 +202,7 @@ public class Database {
 	}
 
 	public void updateQ(QValue q) {
-		updateQ(q.getHistory().getBytes(dict), q.getAction().getBytes(dict),
-				q.getFuture().getBytes(dict), q.getQ());
+		updateQ(q.getHistory().getBytes(dict), q.getAction().getBytes(dict), q.getFuture().getBytes(dict), q.getQ());
 	}
 
 	public void updateQ(byte[] history, byte[] action, byte[] future, double q) {
@@ -226,8 +246,7 @@ public class Database {
 	}
 
 	public boolean getQ(QValue q) {
-		double newQ = getQ(q.getHistory().getBytes(dict), q.getAction().getBytes(dict), q.getFuture()
-				.getBytes(dict));
+		double newQ = getQ(q.getHistory().getBytes(dict), q.getAction().getBytes(dict), q.getFuture().getBytes(dict));
 
 		if (Double.isNaN(newQ)) {
 			return false;
@@ -276,7 +295,7 @@ public class Database {
 	public double getBestQ(StateChain history) {
 		return getBestQ(history.getBytes(dict));
 	}
-	
+
 	public double getBestQ(byte[] history) {
 		try {
 			getBestActionQStatement.setBytes(1, history);
@@ -307,5 +326,51 @@ public class Database {
 
 	public StringDictionary getDictionary() {
 		return dict;
+	}
+
+	public void addQuad(Node g, Node s, Node p, Node o) {
+		try {
+			insertQuadStatement.setLong(1, dict.getId(s.toString()));
+			insertQuadStatement.setLong(2, dict.getId(p.toString()));
+			insertQuadStatement.setLong(3, dict.getId(o.toString()));
+			insertQuadStatement.setLong(4, dict.getId(g.toString()));
+
+			insertQuadStatement.execute();
+		} catch (SQLException e) {
+			throw new DatabaseException("Could not insert quad.", e);
+		}
+	}
+
+	public Iterator<Quad> findAllByURI(String uri) {
+		Collection<Quad> result = new ArrayList<Quad>();
+
+		try {
+			getQuadByContextStatement.setLong(1, dict.getId(uri));
+			ResultSet quads = getQuadByContextStatement.executeQuery();
+
+			while (quads.next()) {
+				result.add(new Quad(Node.createURI(dict.getString(quads.getLong(4))), Node.createURI(dict
+						.getString(quads.getLong(1))), Node.createURI(dict.getString(quads.getLong(2))), Node
+						.createURI(dict.getString(quads.getLong(3)))));
+			}
+
+			quads.close();
+		} catch (SQLException e) {
+			throw new DatabaseException("Could not receive quads.", e);
+		}
+
+		return result.iterator();
+	}
+
+	public void updateURIs(String from, String to) {
+		try {
+			replaceQuadContextStatement.setLong(1, dict.getId(to));
+			replaceQuadContextStatement.setLong(2, dict.getId(from));
+			
+			replaceQuadContextStatement.execute();
+		} catch (SQLException e) {
+			throw new DatabaseException("Could not update URIs.", e);
+		}
+		
 	}
 }
