@@ -46,6 +46,7 @@ public class Database implements SourceIndex {
 
 	private PreparedStatement insertQuadStatement;
 	private PreparedStatement getQuadStatement;
+	private PreparedStatement deleteQuadStatement;
 	private PreparedStatement getQuadByContextStatement;
 	private PreparedStatement replaceQuadContextStatement;
 
@@ -120,6 +121,8 @@ public class Database implements SourceIndex {
 					.prepareStatement("INSERT INTO SourceIndexTable (subject, predicate, object, context) VALUES (?, ?, ?, ?)");
 			getQuadStatement = connection
 					.prepareStatement("SELECT * FROM SourceIndexTable WHERE subject = ? AND predicate = ? AND object = ? and context = ?");
+			deleteQuadStatement = connection
+					.prepareStatement("DELETE FROM SourceIndexTable WHERE subject = ? AND predicate = ? AND object = ? AND context = ?");
 			getQuadByContextStatement = connection
 					.prepareStatement("SELECT subject, predicate, object, context FROM SourceIndexTable WHERE context = ?");
 			replaceQuadContextStatement = connection
@@ -330,12 +333,36 @@ public class Database implements SourceIndex {
 
 	public void addQuad(Node g, Node s, Node p, Node o) {
 		try {
-			insertQuadStatement.setLong(1, dict.getId(s.toString()));
-			insertQuadStatement.setLong(2, dict.getId(p.toString()));
-			insertQuadStatement.setLong(3, dict.getId(o.toString()));
-			insertQuadStatement.setLong(4, dict.getId(g.toString()));
+			getQuadStatement.setLong(1, dict.getId(s.toString()));
+			getQuadStatement.setLong(2, dict.getId(p.toString()));
+			getQuadStatement.setLong(3, dict.getId(o.toString()));
+			getQuadStatement.setLong(4, dict.getId(g.toString()));
 
-			insertQuadStatement.execute();
+			ResultSet result = getQuadStatement.executeQuery();
+
+			if (!result.next()) {
+				insertQuadStatement.setLong(1, dict.getId(s.toString()));
+				insertQuadStatement.setLong(2, dict.getId(p.toString()));
+				insertQuadStatement.setLong(3, dict.getId(o.toString()));
+				insertQuadStatement.setLong(4, dict.getId(g.toString()));
+
+				insertQuadStatement.execute();
+			}
+
+			result.close();
+		} catch (SQLException e) {
+			throw new DatabaseException("Could not insert quad.", e);
+		}
+	}
+	
+	public void deleteQuad(Quad q) {
+		try {
+				deleteQuadStatement.setLong(1, dict.getId(q.getSubject().toString()));
+				deleteQuadStatement.setLong(2, dict.getId(q.getPredicate().toString()));
+				deleteQuadStatement.setLong(3, dict.getId(q.getObject().toString()));
+				deleteQuadStatement.setLong(4, dict.getId(q.getGraph().toString()));
+
+				deleteQuadStatement.execute();
 		} catch (SQLException e) {
 			throw new DatabaseException("Could not insert quad.", e);
 		}
@@ -366,11 +393,11 @@ public class Database implements SourceIndex {
 		try {
 			replaceQuadContextStatement.setLong(1, dict.getId(to));
 			replaceQuadContextStatement.setLong(2, dict.getId(from));
-			
+
 			replaceQuadContextStatement.execute();
 		} catch (SQLException e) {
 			throw new DatabaseException("Could not update URIs.", e);
 		}
-		
+
 	}
 }
