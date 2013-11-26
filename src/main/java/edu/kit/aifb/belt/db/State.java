@@ -1,5 +1,7 @@
 package edu.kit.aifb.belt.db;
 
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -9,6 +11,8 @@ import java.util.List;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Multiset.Entry;
+
+import edu.kit.aifb.belt.db.dict.StringDictionary;
 
 /**
  * A state in the decision graph.
@@ -73,5 +77,23 @@ public class State {
 	 */
 	public State getCleanCopy() {
 		return new State(null, null, properties);
+	}
+
+	public void getBytes(DataOutputStream data, StringDictionary stringDict) throws IOException {
+		data.writeLong(stringDict.getId(getType()));
+		data.writeLong(stringDict.getId(getDomain()));
+		
+		long[] props = new long[properties.size()];
+		
+		int i = 0;
+		for (String prop : properties) {
+			props[i++] = stringDict.getId(prop);
+		}
+		
+		Arrays.sort(props);
+		
+		for (long l : props) {
+			data.writeLong(l);
+		}
 	}
 }

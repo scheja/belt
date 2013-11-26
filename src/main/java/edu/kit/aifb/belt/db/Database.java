@@ -3,18 +3,15 @@ package edu.kit.aifb.belt.db;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.sql.PreparedStatement;
 
 import com.google.common.collect.AbstractIterator;
 
@@ -42,7 +39,7 @@ public class Database {
 	private PreparedStatement getBestActionQStatement;
 	private PreparedStatement insertDictStatement;
 
-	private StringDictionary stateDict = new StringDictionary();
+	private StringDictionary stringDict = new StringDictionary();
 
 	private long size;
 
@@ -94,7 +91,7 @@ public class Database {
 
 			// Create tables
 			Statement stmt = connection.createStatement();
-			stmt.execute("CREATE TABLE IF NOT EXISTS QTable (id INT PRIMARY KEY AUTO_INCREMENT, history BIGINT, action BIGINT, future BIGINT, q DOUBLE, updateCount INT)");
+			stmt.execute("CREATE TABLE IF NOT EXISTS QTable (id INT PRIMARY KEY AUTO_INCREMENT, history BLOB, action BLOB, future BLOB, q DOUBLE, updateCount INT)");
 			stmt.execute("CREATE TABLE IF NOT EXISTS DictionaryTable (id BIGINT PRIMARY KEY, value TEXT)");
 
 			insertQStatement = connection
@@ -110,12 +107,12 @@ public class Database {
 
 			final ResultSet dict = stmt.executeQuery("SELECT id, value FROM DictionaryTable");
 
-			stateDict.load(new AbstractIterator<Entry>() {
+			stringDict.load(new AbstractIterator<Entry>() {
 				@Override
 				protected Entry computeNext() {
 					try {
 						if (dict.next()) {
-							return stateDict.new Entry(dict.getLong(1), dict.getString(2));
+							return stringDict.new Entry(dict.getLong(1), dict.getString(2));
 						} else {
 							return endOfData();
 						}
@@ -151,24 +148,24 @@ public class Database {
 	}
 
 	public void flushDictionary() {
-		Iterator<Long> entries = stateDict.getNewIds().iterator();
+		Iterator<Long> entries = stringDict.getNewIds().iterator();
 
 		try {
 			while (entries.hasNext()) {
 				for (int i = 0; i < BATCH_SIZE && entries.hasNext(); i++) {
 					long entry = entries.next();
 					insertDictStatement.setLong(1, entry);
-					insertDictStatement.setString(2, stateDict.getString(entry));
+					insertDictStatement.setString(2, stringDict.getString(entry));
 					insertDictStatement.addBatch();
 				}
-				
+
 				insertDictStatement.executeBatch();
 			}
 		} catch (SQLException e) {
 			throw new DatabaseException("Could not flush dictionary.", e);
 		}
-		
-		stateDict.clearNewIds();
+
+		stringDict.clearNewIds();
 	}
 
 	public void updateQ(Collection<QValue> qs) {
@@ -184,19 +181,24 @@ public class Database {
 	}
 
 	public void updateQ(QValue q) {
+		updateQ(q.getHistory().getBytes(stringDict), q.getAction().getBytes(stringDict),
+				q.getFuture().getBytes(stringDict), q.getQ());
+	}
+
+	public void updateQ(byte[] history, byte[] action, byte[] future, double q) {
 		try {
-			getQStatement.setString(1, q.getHistory().toString());
-			getQStatement.setString(2, q.getAction().toString());
-			getQStatement.setString(3, q.getFuture().toString());
+			getQStatement.setBytes(1, history);
+			getQStatement.setBytes(2, action);
+			getQStatement.setBytes(3, future);
 
 			ResultSet result = getQStatement.executeQuery();
 
 			if (result.next()) {
-				updateQStatement.setDouble(1, q.getQ());
+				updateQStatement.setDouble(1, q);
 				updateQStatement.setInt(2, result.getInt(2));
-				updateQStatement.setString(3, q.getHistory().toString());
-				updateQStatement.setString(4, q.getAction().toString());
-				updateQStatement.setString(5, q.getFuture().toString());
+				updateQStatement.setBytes(3, history);
+				updateQStatement.setBytes(4, action);
+				updateQStatement.setBytes(5, future);
 
 				int updateCount = updateQStatement.executeUpdate();
 
@@ -204,22 +206,34 @@ public class Database {
 					throw new DatabaseException("Updated a wrong number of rows: " + updateCount + " (should be: ");
 				}
 			} else {
-				insertQStatement.setString(1, q.getHistory().toString());
-				insertQStatement.setString(2, q.getAction().toString());
-				insertQStatement.setString(3, q.getFuture().toString());
-				insertQStatement.setDouble(4, q.getQ());
+				insertQStatement.setBytes(1, history);
+				insertQStatement.setBytes(2, action);
+				insertQStatement.setBytes(3, future);
+				insertQStatement.setDouble(4, q);
 				insertQStatement.setInt(5, 0);
 
 				insertQStatement.execute();
 
 				// Increase size: 3 equals two ids for action and one double for
 				// q.
-				size += (q.getHistory().size() + 3 + q.getFuture().size()) << 3;
+				size += history.length + history.length + 3 * 8;
 			}
 
 			result.close();
 		} catch (SQLException e) {
 			throw new DatabaseException("Could not update Q values.", e);
+		}
+	}
+
+	public boolean getQ(QValue q) {
+		double newQ = getQ(q.getHistory().getBytes(stringDict), q.getAction().getBytes(stringDict), q.getFuture()
+				.getBytes(stringDict));
+
+		if (Double.isNaN(newQ)) {
+			return false;
+		} else {
+			q.setQ(newQ);
+			return true;
 		}
 	}
 
@@ -229,22 +243,22 @@ public class Database {
 	 * 
 	 * @return True if the q value was found in the database, false otherwise.
 	 */
-	public boolean getQ(QValue q) {
+	public double getQ(byte[] history, byte[] action, byte[] future) {
 		try {
-			getQStatement.setString(1, q.getHistory().toString());
-			getQStatement.setString(2, q.getAction().toString());
-			getQStatement.setString(3, q.getFuture().toString());
+			getQStatement.setBytes(1, history);
+			getQStatement.setBytes(2, action);
+			getQStatement.setBytes(3, future);
 
 			ResultSet result = getQStatement.executeQuery();
 
 			if (result.next()) {
-				q.setQ(result.getDouble(1));
+				double q = result.getDouble(1);
 
 				result.close();
-				return true;
+				return q;
 			} else {
 				result.close();
-				return false;
+				return Double.NaN;
 			}
 		} catch (SQLException e) {
 			throw new DatabaseException("Error while fetching q value.", e);
@@ -260,8 +274,12 @@ public class Database {
 	 *         value was found.
 	 */
 	public double getBestQ(StateChain history) {
+		return getBestQ(history.getBytes(stringDict));
+	}
+	
+	public double getBestQ(byte[] history) {
 		try {
-			getBestActionQStatement.setString(1, history.toString());
+			getBestActionQStatement.setBytes(1, history);
 
 			ResultSet result = getBestActionQStatement.executeQuery();
 
