@@ -9,6 +9,10 @@ public class StateChain {
 
 	private List<State> states = new ArrayList<State>();
 
+	public StateChain(StateChain states) {
+		this(states.getStateList());
+	}
+	
 	public StateChain(List<State> states) {
 		this.states.addAll(states);
 	}
@@ -29,5 +33,9 @@ public class StateChain {
 		}
 
 		return str.toString();
+	}
+
+	public int size() {
+		return states.size();
 	}
 }

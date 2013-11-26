@@ -1,4 +1,9 @@
 /target
+<<<<<<< HEAD
 /tdb/*
 .DS_Store
 .password
+=======
+.password
+
+>>>>>>> branch 'master' of https://github.com/scheja/belt.git

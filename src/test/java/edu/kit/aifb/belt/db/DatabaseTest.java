@@ -18,13 +18,13 @@ public class DatabaseTest {
 
 	@Test
 	public void testInsert() {
-		QValue x = new QValue(new StateChain(new State("past1", "past2"), new State("pastx"), new State("pasty")),
-				new Action("abc.de", "knows"), new StateChain(new State("future1", "future2"), new State("futurex"),
-						new State("futurey")), 3);
+		QValue x = new QValue(new StateChain(new State("a", "a", "past1", "past2"), new State("a", "a", "pastx"), new State("a",
+				"a", "pasty")), new Action("abc.de", "knows"), new StateChain(new State("a", "a", "future1", "future2"),
+				new State("a", "a", "futurex"), new State("a", "a", "futurey")), 3);
 
-		QValue y = new QValue(new StateChain(new State("pafsd", "pasfsd"), new State("pastx"), new State("pasty")),
-				new Action("abc.de", "knows"), new StateChain(new State("future1", "future2"), new State("futurex"),
-						new State("futurey")), 2);
+		QValue y = new QValue(new StateChain(new State("pafsd", "pasfsd"), new State("a", "a", "pastx"), new State("a",
+				"a", "pasty")), new Action("abc.de", "knows"), new StateChain(new State("a", "a", "future1", "future2"),
+				new State("a", "a", "futurex"), new State("a", "a", "futurey")), 2);
 
 		db.updateQ(x, y);
 
@@ -37,16 +37,16 @@ public class DatabaseTest {
 		assertTrue("Q must be 3 but was: " + x.getQ(), x.getQ() == 3);
 		assertTrue("Q must be 2 but was: " + y.getQ(), y.getQ() == 2);
 	}
-	
+
 	@Test
 	public void testStateSorting() {
-		QValue x = new QValue(new StateChain(new State("past1", "past2"), new State("pastx"), new State("pasty")),
-				new Action("abc.de", "knows"), new StateChain(new State("future1", "future2"), new State("futurex"),
-						new State("futurey")), 3);
+		QValue x = new QValue(new StateChain(new State("a", "a", "past1", "past2"), new State("a", "a", "pastx"), new State("a",
+				"a", "pasty")), new Action("abc.de", "knows"), new StateChain(new State("a", "a", "future1", "future2"),
+				new State("a", "a", "futurex"), new State("a", "a", "futurey")), 3);
 
-		QValue y = new QValue(new StateChain(new State("past2", "past1"), new State("pastx"), new State("pasty")),
-				new Action("abc.de", "knows"), new StateChain(new State("future2", "future1"), new State("futurex"),
-						new State("futurey")), 2);
+		QValue y = new QValue(new StateChain(new State("a", "a", "past2", "past1"), new State("a", "a", "pastx"), new State("a",
+				"a", "pasty")), new Action("abc.de", "knows"), new StateChain(new State("a", "a", "future2", "future1"),
+				new State("a", "a", "futurex"), new State("a", "a", "futurey")), 2);
 
 		db.updateQ(x, y);
 

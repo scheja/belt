@@ -19,13 +19,19 @@ public class State {
 	private static final String SEPARATOR = "§";
 
 	private Multiset<String> properties = HashMultiset.create();
+	private String domain;
+	private String type;
 
-	public State(Collection<String> properties) {
+	public State(String domain, String type, Collection<String> properties) {
 		this.properties.addAll(properties);
+		this.domain = domain;
+		this.type = type;
 	}
 
-	public State(String... properties) {
+	public State(String domain, String type, String... properties) {
 		this.properties.addAll(Arrays.asList(properties));
+		this.domain = domain;
+		this.type = type;
 	}
 
 	public Multiset<String> getProperties() {
@@ -38,10 +44,34 @@ public class State {
 		Collections.sort(entries, EntryComparator.getComparator());
 		StringBuilder str = new StringBuilder();
 
+		if (domain != null) {
+			str.append(domain).append(SEPARATOR);
+		}
+		
+		if (type != null) {
+			str.append(type).append(SEPARATOR);
+		}
+		
 		for (Entry<String> s : entries) {
 			str.append(s.getElement()).append(SEPARATOR);
 		}
 
 		return str.toString();
+	}
+
+	public String getDomain() {
+		return domain;
+	}
+
+	public String getType() {
+		return type;
+	}
+
+	/**
+	 * Returns a copy of this state without domain and type.
+	 * @return A copy of this state without domain and type.
+	 */
+	public State getCleanCopy() {
+		return new State(null, null, properties);
 	}
 }
