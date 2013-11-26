@@ -6,18 +6,19 @@ package org.squin.engine;
 
 import java.util.Iterator;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.squin.dataset.jenacommon.NodeDictionary;
+import org.squin.dataset.query.SolutionMapping;
+import org.squin.dataset.query.arq.VarDictionary;
+import org.squin.dataset.query.arq.iterators.DecodeBindingsIterator;
+import org.squin.dataset.query.arq.iterators.EncodeBindingsIterator;
+
 import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.sparql.algebra.op.OpBGP;
 import com.hp.hpl.jena.sparql.engine.ExecutionContext;
 import com.hp.hpl.jena.sparql.engine.QueryIterator;
 import com.hp.hpl.jena.sparql.engine.main.OpExecutorFactory;
-
-import org.squin.dataset.jenacommon.NodeDictionary;
-import org.squin.dataset.query.SolutionMapping;
-import org.squin.dataset.query.arq.iterators.DecodeBindingsIterator;
-import org.squin.dataset.query.arq.iterators.EncodeBindingsIterator;
-import org.squin.dataset.query.arq.iterators.TriplePatternQueryIter;
-import org.squin.dataset.query.arq.VarDictionary;
 
 
 /**
@@ -29,6 +30,7 @@ import org.squin.dataset.query.arq.VarDictionary;
 public class OpExecutor extends org.squin.dataset.query.arq.OpExecutor
 {
 	static private OpExecutorFactory factory;
+    static Logger l = LoggerFactory.getLogger(OpExecutor.class);
 
 	/**
 	 * Returns the factory object that creates this OpExecutor implementation.
@@ -67,17 +69,16 @@ public class OpExecutor extends org.squin.dataset.query.arq.OpExecutor
 		VarDictionary varDict = ltbExecCxt.varDict;
 		NodeDictionary nodeDict = ltbExecCxt.nodeDict;
 		
-		
-		System.out.println("New Step:");
-		System.out.println("opBGP Pattern: "+ opBGP.getPattern().toString());		
-		System.out.println("QueryIterator: "+ input.toString());
+		l.info("New Step:");
+		l.info("opBGP Pattern: "+ opBGP.getPattern().toString());		
+		l.info("QueryIterator: "+ input.toString());
 
 		Iterator<SolutionMapping> qIt = new EncodeBindingsIterator( input, ltbExecCxt );
 		for ( Triple t : opBGP.getPattern().getList() ) {
-// 			qIt = new NaiveTriplePatternQueryIter( encode(t,varDict,nodeDict), qIt, ltbExecCxt );
+ 			l.info("Created TPQI for Triple: <{}>", t.toString());
+ 			qIt = new NaiveTriplePatternQueryIter( encode(t,varDict,nodeDict), qIt, ltbExecCxt );
 // 			qIt = new PrefetchingTriplePatternQueryIter( encode(t,varDict,nodeDict), qIt, ltbExecCxt );
-			qIt = new PostponingTriplePatternQueryIter( encode(t,varDict,nodeDict), qIt, ltbExecCxt );
-			System.out.println("Created TPQI for Triple: " + t.toString());
+//			qIt = new PostponingTriplePatternQueryIter( encode(t,varDict,nodeDict), qIt, ltbExecCxt );
 		}
 
 		return new DecodeBindingsIterator( qIt, ltbExecCxt );

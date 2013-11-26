@@ -4,24 +4,25 @@
 */
 package org.squin.engine;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import java.util.NoSuchElementException;
 
-import com.hp.hpl.jena.graph.Node;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.squin.common.Priority;
 import org.squin.dataset.TraceableTriple;
 import org.squin.dataset.Triple;
 import org.squin.dataset.query.BindingProvenance;
 import org.squin.dataset.query.SolutionMapping;
 import org.squin.dataset.query.TriplePattern;
-import org.squin.dataset.query.impl.FixedSizeSolutionMappingImpl;
 import org.squin.dataset.query.arq.iterators.TriplePatternQueryIter;
+import org.squin.dataset.query.impl.FixedSizeSolutionMappingImpl;
 import org.squin.ldcache.DataRetrievedListener;
+
+import com.hp.hpl.jena.graph.Node;
 
 
 /**
@@ -85,7 +86,10 @@ public class NaiveTriplePatternQueryIter extends TriplePatternQueryIter
 
 			currentInputMapping = input.next();
 			currentQueryPattern = substitute( tp, currentInputMapping );
-
+			
+			log.info(currentInputMapping.toString());
+			log.info(currentQueryPattern.toString());
+			
 			ensureRequirement( currentQueryPattern ); // this may take some time
 
 			if ( execCxt.recordProvenance ) {
@@ -98,6 +102,9 @@ public class NaiveTriplePatternQueryIter extends TriplePatternQueryIter
 				                                          (currentQueryPattern.sIsVar) ? Triple.UNKNOWN_IDENTIFIER : currentQueryPattern.s,
 				                                          (currentQueryPattern.pIsVar) ? Triple.UNKNOWN_IDENTIFIER : currentQueryPattern.p,
 				                                          (currentQueryPattern.oIsVar) ? Triple.UNKNOWN_IDENTIFIER : currentQueryPattern.o );
+				
+				currentMatches = new JustLogOverIterator(currentMatches).getIterator();
+				
 			}
 		}
 
@@ -253,5 +260,25 @@ public class NaiveTriplePatternQueryIter extends TriplePatternQueryIter
 			}
 		}
 	}
+	
+	class JustLogOverIterator {
+		private List<Triple> al;
 
+		public JustLogOverIterator(Iterator<? extends Triple> currentMatches) {
+			al = new ArrayList<Triple>();
+			while (currentMatches.hasNext()) {
+				Triple t = currentMatches.next();
+				al.add(t);
+				Node s = ltbExecCxt.nodeDict.getNode(t.s);
+				Node p = ltbExecCxt.nodeDict.getNode(t.p);
+				Node o = ltbExecCxt.nodeDict.getNode(t.o);
+				log.info("Match: <{}> (ID: <{}>) / <{}> (ID: <{}>) / <{}> (ID: <{}>)", new Object[]{s, t.s, p, t.p, o , t.o});
+			}
+		}
+
+		public Iterator<? extends Triple> getIterator() {
+			return al.iterator();
+		}
+		
+	}
 }
