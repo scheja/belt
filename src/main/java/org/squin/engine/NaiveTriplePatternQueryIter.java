@@ -24,6 +24,8 @@ import org.squin.ldcache.DataRetrievedListener;
 
 import com.hp.hpl.jena.graph.Node;
 
+import edu.kit.aifb.belt.learner.LearnPartialChainIterator;
+
 
 /**
  * Naive implementation of the iterator used for the iterator-based
@@ -103,7 +105,7 @@ public class NaiveTriplePatternQueryIter extends TriplePatternQueryIter
 				                                          (currentQueryPattern.pIsVar) ? Triple.UNKNOWN_IDENTIFIER : currentQueryPattern.p,
 				                                          (currentQueryPattern.oIsVar) ? Triple.UNKNOWN_IDENTIFIER : currentQueryPattern.o );
 				
-				currentMatches = new JustLogOverIterator(currentMatches).getIterator();
+				currentMatches = new LearnPartialChainIterator(currentMatches, ltbExecCxt.nodeDict).getIterator();
 				
 			}
 		}
@@ -259,26 +261,5 @@ public class NaiveTriplePatternQueryIter extends TriplePatternQueryIter
 				notify();
 			}
 		}
-	}
-	
-	class JustLogOverIterator {
-		private List<Triple> al;
-
-		public JustLogOverIterator(Iterator<? extends Triple> currentMatches) {
-			al = new ArrayList<Triple>();
-			while (currentMatches.hasNext()) {
-				Triple t = currentMatches.next();
-				al.add(t);
-				Node s = ltbExecCxt.nodeDict.getNode(t.s);
-				Node p = ltbExecCxt.nodeDict.getNode(t.p);
-				Node o = ltbExecCxt.nodeDict.getNode(t.o);
-				log.info("Match: <{}> (ID: <{}>) / <{}> (ID: <{}>) / <{}> (ID: <{}>)", new Object[]{s, t.s, p, t.p, o , t.o});
-			}
-		}
-
-		public Iterator<? extends Triple> getIterator() {
-			return al.iterator();
-		}
-		
 	}
 }
