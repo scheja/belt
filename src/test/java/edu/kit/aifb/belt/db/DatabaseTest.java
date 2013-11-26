@@ -6,6 +6,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.Iterator;
 
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -113,5 +114,10 @@ public class DatabaseTest {
 		}
 
 		return size;
+	}
+	
+	@AfterClass
+	public static void tearDownAfterClass() {
+		db.close();
 	}
 }

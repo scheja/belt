@@ -357,15 +357,15 @@ public class Database implements SourceIndex {
 			throw new DatabaseException("Could not insert quad.", e);
 		}
 	}
-	
+
 	public void deleteQuad(Quad q) {
 		try {
-				deleteQuadStatement.setLong(1, dict.getId(q.getSubject().toString()));
-				deleteQuadStatement.setLong(2, dict.getId(q.getPredicate().toString()));
-				deleteQuadStatement.setLong(3, dict.getId(q.getObject().toString()));
-				deleteQuadStatement.setLong(4, dict.getId(q.getGraph().toString()));
+			deleteQuadStatement.setLong(1, dict.getId(q.getSubject().toString()));
+			deleteQuadStatement.setLong(2, dict.getId(q.getPredicate().toString()));
+			deleteQuadStatement.setLong(3, dict.getId(q.getObject().toString()));
+			deleteQuadStatement.setLong(4, dict.getId(q.getGraph().toString()));
 
-				deleteQuadStatement.execute();
+			deleteQuadStatement.execute();
 		} catch (SQLException e) {
 			throw new DatabaseException("Could not insert quad.", e);
 		}
