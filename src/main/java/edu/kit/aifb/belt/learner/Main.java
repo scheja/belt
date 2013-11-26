@@ -3,8 +3,6 @@
  */
 package edu.kit.aifb.belt.learner;
 
-import java.util.Iterator;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.squin.command.modules.ModMonitor;
@@ -20,9 +18,8 @@ import com.hp.hpl.jena.query.QueryExecution;
 import com.hp.hpl.jena.query.QueryExecutionFactory;
 import com.hp.hpl.jena.query.ResultSet;
 import com.hp.hpl.jena.query.ResultSetFormatter;
-import com.hp.hpl.jena.sparql.core.Quad;
 
-import edu.kit.aifb.belt.sourceindex.SourceIndex;
+import edu.kit.aifb.belt.sourceindex.SourceIndexJenaImpl;
 
 /**
  * @author janscheurenbrand
@@ -98,6 +95,8 @@ public class Main {
 		System.out.println( "Time: " + modMonitor.timeStr(time) + " sec" );
 		// System.out.println( "Statistics:" );
 		//ldcache.getStatistics().print( System.out, 1 );
+		
+		SourceIndexJenaImpl.handleRedirections();
 		
 		
 		try {

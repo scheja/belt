@@ -30,7 +30,7 @@ public class DataRetrieverIterator extends DataAnalyzer.DataAnalyzingIterator {
 	static List<String> urls = new ArrayList<String>();
 	static Logger l = LoggerFactory.getLogger(DataRetrieverIterator.class);
 	static int globalcounter = 0;
-	private SourceIndex si;
+	private SourceIndexJenaImpl si;
 	int counter = 0;
 	
 	public DataRetrieverIterator(Iterator<org.squin.dataset.Triple> input, URL src, URIDerefContext _derefCxt) {
@@ -39,7 +39,7 @@ public class DataRetrieverIterator extends DataAnalyzer.DataAnalyzingIterator {
 		currentURL = src;
 		derefCxt = _derefCxt; 
 		counter = 0;
-		si = new SourceIndex();
+		si = new SourceIndexJenaImpl();
 		System.out.println(globalcounter);
 	}
 
