@@ -14,12 +14,7 @@ public class SimpleQLearner extends AbstractQLearner {
 		this.db = db;
 	}
 	
-	/**
-	 * Performs an update q operation.
-	 * @param history The state history. Entries should have a domain and a type.
-	 * @param action The action.
-	 * @param future The state future. Entries shouldn't have a domain, but a type.
-	 */
+	
 	public boolean updateQ(StateChain history, Action action, StateChain future, double reward, double learningRate, double discountFactor) {
 		if (db.getSize() > maxDbSize) {
 			return false;
