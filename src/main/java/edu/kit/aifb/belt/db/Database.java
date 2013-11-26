@@ -1,6 +1,7 @@
 package edu.kit.aifb.belt.db;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -63,7 +64,9 @@ public class Database implements SourceIndex {
 
 		try {
 			Properties p = new Properties();
-			p.load(getClass().getResourceAsStream(".password"));
+			InputStream in = getClass().getResourceAsStream(".password");
+			p.load(in);
+			in.close();
 
 			user = p.getProperty("user");
 			password = p.getProperty("password");
