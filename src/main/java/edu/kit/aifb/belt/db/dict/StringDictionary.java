@@ -1,7 +1,6 @@
 package edu.kit.aifb.belt.db.dict;
 
 import java.io.UnsupportedEncodingException;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -60,7 +59,17 @@ public class StringDictionary {
 	}
 
 	public String getString(long id) {
-		return idToStringMap.get(id);
+		if (id == 0) {
+			return null;
+		}
+		
+		String result = idToStringMap.get(id);
+		
+		if (result == null) {
+			throw new IllegalArgumentException("Unknown id: " + id);
+		}
+		
+		return result;
 	}
 	
 	/**
@@ -69,6 +78,10 @@ public class StringDictionary {
 	 * @return A unique id for the string.
 	 */
 	public long getId(String value) {
+		if (value == null) {
+			return 0;
+		}
+		
 		Long result = stringToIdMap.get(value);
 		
 		if (result == null) {
@@ -82,7 +95,7 @@ public class StringDictionary {
 		try {
 			long id = murmur3.hashBytes(value.getBytes("UTF-8")).asLong();
 			
-			while (idToStringMap.get(id) != null) {
+			while (idToStringMap.get(id) != null || id == 0) {
 				id++;
 			}
 			

@@ -5,6 +5,8 @@ import java.util.List;
 
 import com.google.common.collect.Multiset;
 
+import edu.kit.aifb.belt.db.dict.StringDictionary;
+
 public class StateFactory extends AbstractStateFactory {
 	private int maxProps;
 	private boolean ignoreMultiProps;
@@ -22,7 +24,7 @@ public class StateFactory extends AbstractStateFactory {
 	}
 
 	@Override
-	public List<State> createState(String domain, String type, Multiset<String> properties) {
+	public List<State> createState(String domain, String type, Multiset<String> properties, StringDictionary dict) {
 		if (ignoreMultiProps) {
 			for (String entry : properties.elementSet()) {
 				properties.setCount(entry, 1);
@@ -37,10 +39,10 @@ public class StateFactory extends AbstractStateFactory {
 			List<Multiset<String>> propSets = comb.combinations(maxProps);
 			
 			for (Multiset<String> propSet : propSets) {
-				states.add(new State(domain, type, propSet));
+				states.add(new State(domain, type, propSet, dict));
 			}
 		} else {
-			states.add(new State(domain, type, properties));
+			states.add(new State(domain, type, properties, dict));
 		}
 
 		return states;

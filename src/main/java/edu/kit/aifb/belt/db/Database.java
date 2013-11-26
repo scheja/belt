@@ -39,7 +39,7 @@ public class Database {
 	private PreparedStatement getBestActionQStatement;
 	private PreparedStatement insertDictStatement;
 
-	private StringDictionary stringDict = new StringDictionary();
+	private StringDictionary dict = new StringDictionary();
 
 	private long size;
 
@@ -105,14 +105,14 @@ public class Database {
 
 			insertDictStatement = connection.prepareStatement("INSERT IGNORE INTO DictionaryTable (?, ?)");
 
-			final ResultSet dict = stmt.executeQuery("SELECT id, value FROM DictionaryTable");
+			final ResultSet entries = stmt.executeQuery("SELECT id, value FROM DictionaryTable");
 
-			stringDict.load(new AbstractIterator<Entry>() {
+			dict.load(new AbstractIterator<Entry>() {
 				@Override
 				protected Entry computeNext() {
 					try {
-						if (dict.next()) {
-							return stringDict.new Entry(dict.getLong(1), dict.getString(2));
+						if (entries.next()) {
+							return dict.new Entry(entries.getLong(1), entries.getString(2));
 						} else {
 							return endOfData();
 						}
@@ -124,7 +124,7 @@ public class Database {
 				}
 			});
 
-			dict.close();
+			entries.close();
 		} catch (ClassNotFoundException e) {
 			throw new DatabaseException("Could not find driver: " + DRIVER, e);
 		} catch (SQLException e) {
@@ -148,14 +148,14 @@ public class Database {
 	}
 
 	public void flushDictionary() {
-		Iterator<Long> entries = stringDict.getNewIds().iterator();
+		Iterator<Long> entries = dict.getNewIds().iterator();
 
 		try {
 			while (entries.hasNext()) {
 				for (int i = 0; i < BATCH_SIZE && entries.hasNext(); i++) {
 					long entry = entries.next();
 					insertDictStatement.setLong(1, entry);
-					insertDictStatement.setString(2, stringDict.getString(entry));
+					insertDictStatement.setString(2, dict.getString(entry));
 					insertDictStatement.addBatch();
 				}
 
@@ -165,7 +165,7 @@ public class Database {
 			throw new DatabaseException("Could not flush dictionary.", e);
 		}
 
-		stringDict.clearNewIds();
+		dict.clearNewIds();
 	}
 
 	public void updateQ(Collection<QValue> qs) {
@@ -181,8 +181,8 @@ public class Database {
 	}
 
 	public void updateQ(QValue q) {
-		updateQ(q.getHistory().getBytes(stringDict), q.getAction().getBytes(stringDict),
-				q.getFuture().getBytes(stringDict), q.getQ());
+		updateQ(q.getHistory().getBytes(dict), q.getAction().getBytes(dict),
+				q.getFuture().getBytes(dict), q.getQ());
 	}
 
 	public void updateQ(byte[] history, byte[] action, byte[] future, double q) {
@@ -226,8 +226,8 @@ public class Database {
 	}
 
 	public boolean getQ(QValue q) {
-		double newQ = getQ(q.getHistory().getBytes(stringDict), q.getAction().getBytes(stringDict), q.getFuture()
-				.getBytes(stringDict));
+		double newQ = getQ(q.getHistory().getBytes(dict), q.getAction().getBytes(dict), q.getFuture()
+				.getBytes(dict));
 
 		if (Double.isNaN(newQ)) {
 			return false;
@@ -274,7 +274,7 @@ public class Database {
 	 *         value was found.
 	 */
 	public double getBestQ(StateChain history) {
-		return getBestQ(history.getBytes(stringDict));
+		return getBestQ(history.getBytes(dict));
 	}
 	
 	public double getBestQ(byte[] history) {
@@ -303,5 +303,9 @@ public class Database {
 	 */
 	public long getSize() {
 		return size;
+	}
+
+	public StringDictionary getDictionary() {
+		return dict;
 	}
 }
