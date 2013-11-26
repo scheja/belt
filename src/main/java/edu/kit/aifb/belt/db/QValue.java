@@ -7,8 +7,6 @@ package edu.kit.aifb.belt.db;
  * @author sibbo
  */
 public class QValue {
-	private static final String SEPARATOR = "§";
-
 	private StateChain history;
 	private Action action;
 	private StateChain future;

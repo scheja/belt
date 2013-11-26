@@ -3,19 +3,34 @@ package edu.kit.aifb.belt.db;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.Properties;
-import java.sql.PreparedStatement;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import com.google.common.collect.AbstractIterator;
+import com.hp.hpl.jena.graph.Node;
+import com.hp.hpl.jena.sparql.core.Quad;
+
+import edu.kit.aifb.belt.db.dict.StringDictionary;
+import edu.kit.aifb.belt.db.dict.StringDictionary.Entry;
+import edu.kit.aifb.belt.sourceindex.SourceIndex;
 
 /**
  * Connects to the database, provides standard functionality.
  * 
  * @author sibbo
  */
-public class Database {
+public class Database implements SourceIndex {
 	private static final String DRIVER = "com.mysql.jdbc.Driver";
+
+	private static final int BATCH_SIZE = 100;
 
 	private String host;
 	private String user;
@@ -27,10 +42,21 @@ public class Database {
 	private PreparedStatement getQStatement;
 	private PreparedStatement getBestActionQStatement;
 
+	private PreparedStatement insertDictStatement;
+
+	private PreparedStatement insertQuadStatement;
+	private PreparedStatement getQuadStatement;
+	private PreparedStatement deleteQuadStatement;
+	private PreparedStatement getQuadByContextStatement;
+	private PreparedStatement replaceQuadContextStatement;
+
+	private StringDictionary dict = new StringDictionary();
+
 	private long size;
 
 	/**
-	 * @param host Format: domain/dbname.
+	 * @param host
+	 *            Format: domain/dbname.
 	 */
 	public Database(String host) {
 		this.host = host;
@@ -55,9 +81,10 @@ public class Database {
 		this.user = user;
 		this.password = password;
 	}
-	
+
 	/**
-	 * Returns a new {@code Database} object with the same host, user and password. The new object is not connected.
+	 * Returns a new {@code Database} object with the same host, user and
+	 * password. The new object is not connected.
 	 */
 	public Database clone() {
 		return new Database(host, user, password);
@@ -72,6 +99,13 @@ public class Database {
 			Class.forName(DRIVER);
 
 			connection = DriverManager.getConnection("jdbc:mysql://" + host, user, password);
+
+			// Create tables
+			Statement stmt = connection.createStatement();
+			stmt.execute("CREATE TABLE IF NOT EXISTS QTable (id INT PRIMARY KEY AUTO_INCREMENT, history BLOB, action BLOB, future BLOB, q DOUBLE, updateCount INT)");
+			stmt.execute("CREATE TABLE IF NOT EXISTS DictionaryTable (id BIGINT PRIMARY KEY, value TEXT)");
+			stmt.execute("CREATE TABLE IF NOT EXISTS SourceIndexTable (id INT PRIMARY KEY AUTO_INCREMENT, subject BIGINT, predicate BIGINT, object BIGINT, context BIGINT)");
+
 			insertQStatement = connection
 					.prepareStatement("INSERT INTO QTable (history, action, future, q, updateCount) VALUES (?, ?, ?, ?, ?)");
 			updateQStatement = connection
@@ -80,6 +114,41 @@ public class Database {
 					.prepareStatement("SELECT q, updateCount FROM QTable WHERE history = ? AND action = ? AND future = ?");
 			getBestActionQStatement = connection
 					.prepareStatement("SELECT q FROM QTable WHERE history = ? ORDER BY q DESC LIMIT 1");
+
+			insertDictStatement = connection.prepareStatement("INSERT IGNORE INTO DictionaryTable (?, ?)");
+
+			insertQuadStatement = connection
+					.prepareStatement("INSERT INTO SourceIndexTable (subject, predicate, object, context) VALUES (?, ?, ?, ?)");
+			getQuadStatement = connection
+					.prepareStatement("SELECT * FROM SourceIndexTable WHERE subject = ? AND predicate = ? AND object = ? and context = ?");
+			deleteQuadStatement = connection
+					.prepareStatement("DELETE FROM SourceIndexTable WHERE subject = ? AND predicate = ? AND object = ? AND context = ?");
+			getQuadByContextStatement = connection
+					.prepareStatement("SELECT subject, predicate, object, context FROM SourceIndexTable WHERE context = ?");
+			replaceQuadContextStatement = connection
+					.prepareStatement("UPDATE SourceIndexTable SET context = ? WHERE context = ?");
+
+			final ResultSet entries = stmt.executeQuery("SELECT id, value FROM DictionaryTable");
+
+			dict.load(new AbstractIterator<Entry>() {
+				@Override
+				protected Entry computeNext() {
+					try {
+						if (entries.next()) {
+							return dict.new Entry(entries.getLong(1), entries.getString(2));
+						} else {
+							return endOfData();
+						}
+					} catch (SQLException e) {
+						Logger.getLogger(getClass().getName()).log(Level.WARNING, "Couldn't load dictionary", e);
+
+						return endOfData();
+					}
+				}
+			});
+
+			entries.close();
+			stmt.close();
 		} catch (ClassNotFoundException e) {
 			throw new DatabaseException("Could not find driver: " + DRIVER, e);
 		} catch (SQLException e) {
@@ -92,12 +161,35 @@ public class Database {
 			return;
 		}
 
+		flushDictionary();
+
 		try {
 			connection.close();
 			connection = null;
 		} catch (SQLException e) {
 			throw new DatabaseException("Could not close database connection", e);
 		}
+	}
+
+	public void flushDictionary() {
+		Iterator<Long> entries = dict.getNewIds().iterator();
+
+		try {
+			while (entries.hasNext()) {
+				for (int i = 0; i < BATCH_SIZE && entries.hasNext(); i++) {
+					long entry = entries.next();
+					insertDictStatement.setLong(1, entry);
+					insertDictStatement.setString(2, dict.getString(entry));
+					insertDictStatement.addBatch();
+				}
+
+				insertDictStatement.executeBatch();
+			}
+		} catch (SQLException e) {
+			throw new DatabaseException("Could not flush dictionary.", e);
+		}
+
+		dict.clearNewIds();
 	}
 
 	public void updateQ(Collection<QValue> qs) {
@@ -113,19 +205,23 @@ public class Database {
 	}
 
 	public void updateQ(QValue q) {
+		updateQ(q.getHistory().getBytes(dict), q.getAction().getBytes(dict), q.getFuture().getBytes(dict), q.getQ());
+	}
+
+	public void updateQ(byte[] history, byte[] action, byte[] future, double q) {
 		try {
-			getQStatement.setString(1, q.getHistory().toString());
-			getQStatement.setString(2, q.getAction().toString());
-			getQStatement.setString(3, q.getFuture().toString());
+			getQStatement.setBytes(1, history);
+			getQStatement.setBytes(2, action);
+			getQStatement.setBytes(3, future);
 
 			ResultSet result = getQStatement.executeQuery();
 
 			if (result.next()) {
-				updateQStatement.setDouble(1, q.getQ());
+				updateQStatement.setDouble(1, q);
 				updateQStatement.setInt(2, result.getInt(2));
-				updateQStatement.setString(3, q.getHistory().toString());
-				updateQStatement.setString(4, q.getAction().toString());
-				updateQStatement.setString(5, q.getFuture().toString());
+				updateQStatement.setBytes(3, history);
+				updateQStatement.setBytes(4, action);
+				updateQStatement.setBytes(5, future);
 
 				int updateCount = updateQStatement.executeUpdate();
 
@@ -133,22 +229,33 @@ public class Database {
 					throw new DatabaseException("Updated a wrong number of rows: " + updateCount + " (should be: ");
 				}
 			} else {
-				insertQStatement.setString(1, q.getHistory().toString());
-				insertQStatement.setString(2, q.getAction().toString());
-				insertQStatement.setString(3, q.getFuture().toString());
-				insertQStatement.setDouble(4, q.getQ());
+				insertQStatement.setBytes(1, history);
+				insertQStatement.setBytes(2, action);
+				insertQStatement.setBytes(3, future);
+				insertQStatement.setDouble(4, q);
 				insertQStatement.setInt(5, 0);
 
 				insertQStatement.execute();
 
 				// Increase size: 3 equals two ids for action and one double for
 				// q.
-				size += (q.getHistory().size() + 3 + q.getFuture().size()) << 3;
+				size += history.length + history.length + 3 * 8;
 			}
 
 			result.close();
 		} catch (SQLException e) {
 			throw new DatabaseException("Could not update Q values.", e);
+		}
+	}
+
+	public boolean getQ(QValue q) {
+		double newQ = getQ(q.getHistory().getBytes(dict), q.getAction().getBytes(dict), q.getFuture().getBytes(dict));
+
+		if (Double.isNaN(newQ)) {
+			return false;
+		} else {
+			q.setQ(newQ);
+			return true;
 		}
 	}
 
@@ -158,22 +265,22 @@ public class Database {
 	 * 
 	 * @return True if the q value was found in the database, false otherwise.
 	 */
-	public boolean getQ(QValue q) {
+	public double getQ(byte[] history, byte[] action, byte[] future) {
 		try {
-			getQStatement.setString(1, q.getHistory().toString());
-			getQStatement.setString(2, q.getAction().toString());
-			getQStatement.setString(3, q.getFuture().toString());
+			getQStatement.setBytes(1, history);
+			getQStatement.setBytes(2, action);
+			getQStatement.setBytes(3, future);
 
 			ResultSet result = getQStatement.executeQuery();
 
 			if (result.next()) {
-				q.setQ(result.getDouble(1));
+				double q = result.getDouble(1);
 
 				result.close();
-				return true;
+				return q;
 			} else {
 				result.close();
-				return false;
+				return Double.NaN;
 			}
 		} catch (SQLException e) {
 			throw new DatabaseException("Error while fetching q value.", e);
@@ -182,15 +289,22 @@ public class Database {
 
 	/**
 	 * Returns the best available q value for the given history.
-	 * @param history The history.
-	 * @return The best available q value for the given history, or NaN, if no q value was found.
+	 * 
+	 * @param history
+	 *            The history.
+	 * @return The best available q value for the given history, or NaN, if no q
+	 *         value was found.
 	 */
 	public double getBestQ(StateChain history) {
+		return getBestQ(history.getBytes(dict));
+	}
+
+	public double getBestQ(byte[] history) {
 		try {
-			getBestActionQStatement.setString(1, history.toString());
+			getBestActionQStatement.setBytes(1, history);
 
 			ResultSet result = getBestActionQStatement.executeQuery();
-			
+
 			if (result.next()) {
 				double q = result.getDouble(1);
 				result.close();
@@ -211,5 +325,79 @@ public class Database {
 	 */
 	public long getSize() {
 		return size;
+	}
+
+	public StringDictionary getDictionary() {
+		return dict;
+	}
+
+	public void addQuad(Node g, Node s, Node p, Node o) {
+		try {
+			getQuadStatement.setLong(1, dict.getId(s.toString()));
+			getQuadStatement.setLong(2, dict.getId(p.toString()));
+			getQuadStatement.setLong(3, dict.getId(o.toString()));
+			getQuadStatement.setLong(4, dict.getId(g.toString()));
+
+			ResultSet result = getQuadStatement.executeQuery();
+
+			if (!result.next()) {
+				insertQuadStatement.setLong(1, dict.getId(s.toString()));
+				insertQuadStatement.setLong(2, dict.getId(p.toString()));
+				insertQuadStatement.setLong(3, dict.getId(o.toString()));
+				insertQuadStatement.setLong(4, dict.getId(g.toString()));
+
+				insertQuadStatement.execute();
+			}
+
+			result.close();
+		} catch (SQLException e) {
+			throw new DatabaseException("Could not insert quad.", e);
+		}
+	}
+	
+	public void deleteQuad(Quad q) {
+		try {
+				deleteQuadStatement.setLong(1, dict.getId(q.getSubject().toString()));
+				deleteQuadStatement.setLong(2, dict.getId(q.getPredicate().toString()));
+				deleteQuadStatement.setLong(3, dict.getId(q.getObject().toString()));
+				deleteQuadStatement.setLong(4, dict.getId(q.getGraph().toString()));
+
+				deleteQuadStatement.execute();
+		} catch (SQLException e) {
+			throw new DatabaseException("Could not insert quad.", e);
+		}
+	}
+
+	public Iterator<Quad> findAllByURI(String uri) {
+		Collection<Quad> result = new ArrayList<Quad>();
+
+		try {
+			getQuadByContextStatement.setLong(1, dict.getId(uri));
+			ResultSet quads = getQuadByContextStatement.executeQuery();
+
+			while (quads.next()) {
+				result.add(new Quad(Node.createURI(dict.getString(quads.getLong(4))), Node.createURI(dict
+						.getString(quads.getLong(1))), Node.createURI(dict.getString(quads.getLong(2))), Node
+						.createURI(dict.getString(quads.getLong(3)))));
+			}
+
+			quads.close();
+		} catch (SQLException e) {
+			throw new DatabaseException("Could not receive quads.", e);
+		}
+
+		return result.iterator();
+	}
+
+	public void updateURIs(String from, String to) {
+		try {
+			replaceQuadContextStatement.setLong(1, dict.getId(to));
+			replaceQuadContextStatement.setLong(2, dict.getId(from));
+
+			replaceQuadContextStatement.execute();
+		} catch (SQLException e) {
+			throw new DatabaseException("Could not update URIs.", e);
+		}
+
 	}
 }

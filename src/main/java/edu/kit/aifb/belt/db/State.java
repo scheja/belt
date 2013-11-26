@@ -1,14 +1,14 @@
 package edu.kit.aifb.belt.db;
 
-import java.util.ArrayList;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
 
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
-import com.google.common.collect.Multiset.Entry;
+
+import edu.kit.aifb.belt.db.dict.StringDictionary;
 
 /**
  * A state in the decision graph.
@@ -16,62 +16,71 @@ import com.google.common.collect.Multiset.Entry;
  * @author sibbo
  */
 public class State {
-	private static final String SEPARATOR = "§";
+	private long[] properties;
+	private long domain;
+	private long type;
 
-	private Multiset<String> properties = HashMultiset.create();
-	private String domain;
-	private String type;
+	public State(String domain, String type, Collection<String> properties, StringDictionary dict) {
+		this.properties = new long[properties.size()];
 
-	public State(String domain, String type, Collection<String> properties) {
-		this.properties.addAll(properties);
+		int i = 0;
+		for (String s : properties) {
+			this.properties[i++] = dict.getId(s);
+		}
+
+		Arrays.sort(this.properties);
+
+		this.domain = dict.getId(domain);
+		this.type = dict.getId(type);
+	}
+
+	public State(String domain, String type, StringDictionary dict, String... properties) {
+		this(domain, type, Arrays.asList(properties), dict);
+	}
+
+	public State(long domain, long type, long[] properties) {
 		this.domain = domain;
 		this.type = type;
+		this.properties = properties;
+		
+		Arrays.sort(this.properties);
 	}
 
-	public State(String domain, String type, String... properties) {
-		this.properties.addAll(Arrays.asList(properties));
-		this.domain = domain;
-		this.type = type;
-	}
+	public Multiset<String> getProperties(StringDictionary dict) {
+		Multiset<String> set = HashMultiset.create();
 
-	public Multiset<String> getProperties() {
-		return properties;
-	}
-
-	public String toString() {
-		List<Entry<String>> entries = new ArrayList<Entry<String>>(properties.entrySet().size());
-		entries.addAll(properties.entrySet());
-		Collections.sort(entries, EntryComparator.getComparator());
-		StringBuilder str = new StringBuilder();
-
-		if (domain != null) {
-			str.append(domain).append(SEPARATOR);
+		for (long l : properties) {
+			set.add(dict.getString(l));
 		}
 		
-		if (type != null) {
-			str.append(type).append(SEPARATOR);
-		}
-		
-		for (Entry<String> s : entries) {
-			str.append(s.getElement()).append(SEPARATOR);
-		}
-
-		return str.toString();
+		return set;
 	}
 
-	public String getDomain() {
-		return domain;
+	public String getDomain(StringDictionary dict) {
+		return dict.getString(domain);
 	}
 
-	public String getType() {
-		return type;
+	public String getType(StringDictionary dict) {
+		return dict.getString(type);
 	}
 
 	/**
 	 * Returns a copy of this state without domain and type.
+	 * 
 	 * @return A copy of this state without domain and type.
 	 */
 	public State getCleanCopy() {
-		return new State(null, null, properties);
+		return new State(0, 0, properties);
+	}
+
+	public void getBytes(DataOutputStream data, StringDictionary stringDict) throws IOException {
+		data.writeLong(type);
+		data.writeLong(domain);
+
+		data.writeInt(properties.length);
+
+		for (long l : properties) {
+			data.writeLong(l);
+		}
 	}
 }

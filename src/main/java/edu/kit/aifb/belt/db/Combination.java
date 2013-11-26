@@ -5,7 +5,6 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
-import java.util.Stack;
 
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
@@ -31,7 +30,6 @@ public class Combination<T> {
 		return result;
 	}
 
-	@SuppressWarnings("unchecked")
 	private void createCombinations(List<Multiset<T>> result, Deque<T> candidate, int offset, int size) {
 		if (candidate.size() == size) {
 			Multiset<T> set = HashMultiset.create();
