@@ -36,7 +36,7 @@ import org.squin.lookup.deref.jenaimpl.JenaIOBasedDerefTask.TripleMaterializer;
 import com.hp.hpl.jena.sparql.core.Quad;
 
 import edu.kit.aifb.belt.sourceindex.DataRetrieverIterator;
-import edu.kit.aifb.belt.sourceindex.SourceIndex;
+import edu.kit.aifb.belt.sourceindex.SourceIndexJenaImpl;
 
 
 /**
@@ -166,11 +166,11 @@ abstract public class DerefTaskBase extends TaskBase<DereferencingResult>
 	{
 		log.debug( "Started to dereference the URI <{}> (ID: {}).", url.toString(), uriID );
 		
-		SourceIndex si = new SourceIndex();
+		SourceIndexJenaImpl si = new SourceIndexJenaImpl();
 		Iterator<Quad> res = si.findAllByURI(url.toString());
 		int counter = 0;
 		TripleMaterializer tm = new TripleMaterializer( ((JenaIOBasedDerefContext) derefCxt).nodeDict );
-		
+				
 		while ( res.hasNext() ) {
 			Quad q = res.next();
 			tm.send(q.asTriple());
@@ -179,15 +179,29 @@ abstract public class DerefTaskBase extends TaskBase<DereferencingResult>
 		
 		if (counter > 0) {
 			importer.importData( tm.triples.iterator(), new SimpleRDFGraphProvenanceImpl(url) );
-			System.out.println("Loaded " + counter + " triples from the sourceindex.");
+			log.info("Loaded " + counter + " triples from the sourceindex for the URI <{}> (ID: {}).", url.toString(), uriID);
 			return new DataRetrieved( uriID,
                     getTimestamp(),
                     getExecutionStartTimestamp(),
                     null,
                     null,
                     null);
+		} else {
+			// switch to stop if nothing is found in the DB
+			boolean stop = true;
+			if (stop) {
+				String errmsg = "Unexpected response code (" + 404 + ") for URI <" + url.toString() + "> (ID: " + uriID + ").";
+				log.debug( errmsg );
+				return new Failure( uriID,
+				                    getTimestamp(),
+				                    getExecutionStartTimestamp(),
+				                    new DereferencingException(errmsg),
+			                       provideHeaderFields(null) );
+			}
 		}
 
+		log.info("Found nothing in the sourceindex for the URI <{}> (ID: {}).", url.toString(), uriID);
+		
 		try {
 			HttpURLConnection con = getConnection();
 			configureConnection( con );
@@ -445,6 +459,8 @@ abstract public class DerefTaskBase extends TaskBase<DereferencingResult>
 		                          uriID,
 		                          locationField,
 		                          redirectionUriID } );
+		
+		SourceIndexJenaImpl.addRedirect(url.toString(), locationField);
 
 		return new Redirected( uriID,
 		                       getTimestamp(),
