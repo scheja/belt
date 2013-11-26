@@ -1,4 +1,9 @@
-package edu.kit.aifb.belt.db;
+package edu.kit.aifb.belt.learner;
+
+import edu.kit.aifb.belt.db.Action;
+import edu.kit.aifb.belt.db.Database;
+import edu.kit.aifb.belt.db.QValue;
+import edu.kit.aifb.belt.db.StateChain;
 
 public class SimpleQLearner extends AbstractQLearner {
 	private long maxDbSize;
@@ -27,13 +32,20 @@ public class SimpleQLearner extends AbstractQLearner {
 		
 		
 		QValue q = new QValue(history, action, future);
-		// Get q. If it doesn't exist, it will be 0
+		// Get q. If it doesn't exist, it will be 0.
 		db.getQ(q);
 		
 		StateChain newHistory = new StateChain(history);
-		// Add first last element of future states.
+		// Add first element of future states.
 		newHistory.getStateList().add(future.getStateList().get(0));
-		q.setQ(q.getQ() + learningRate * (reward + discountFactor * db.getBestQ(newHistory) - q.getQ()));
+		
+		double bestFutureQ = db.getBestQ(newHistory);
+		
+		if (Double.isNaN(bestFutureQ)) {
+			bestFutureQ = 0;
+		}
+		
+		q.setQ(q.getQ() + learningRate * (reward + discountFactor * bestFutureQ - q.getQ()));
 		
 		db.updateQ(q);
 		
