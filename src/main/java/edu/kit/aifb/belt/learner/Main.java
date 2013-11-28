@@ -31,13 +31,14 @@ public class Main {
 
     static Logger l = LoggerFactory.getLogger(Main.class);
 	protected static ModMonitor modMonitor = new ModMonitor ();
+	private static Database db = null;
 
 	
 	/**
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		Database db = new Database("janscheurenbrand.de/belt");
+		db = new Database("janscheurenbrand.de/belt");
 		db.connect();
 		db.setDictionaryFlushThreshold(100);
 		
@@ -79,6 +80,10 @@ public class Main {
 //		}
 		
 		db.close();
+	}
+	
+	public static Database getDB() {
+		return db;
 	}
 
 

@@ -24,13 +24,15 @@ import org.squin.lookup.deref.jenaimpl.JenaIOBasedDerefContext;
 
 import com.hp.hpl.jena.graph.Node;
 
+import edu.kit.aifb.belt.learner.Main;
+
 public class DataRetrieverIterator extends DataAnalyzer.DataAnalyzingIterator {
 	private URL currentURL = null;
 	private URIDerefContext derefCxt;
 	static List<String> urls = new ArrayList<String>();
 	static Logger l = LoggerFactory.getLogger(DataRetrieverIterator.class);
 	static int globalcounter = 0;
-	private SourceIndexJenaImpl si;
+	private SourceIndex si;
 	int counter = 0;
 	
 	public DataRetrieverIterator(Iterator<org.squin.dataset.Triple> input, URL src, URIDerefContext _derefCxt) {
@@ -39,7 +41,7 @@ public class DataRetrieverIterator extends DataAnalyzer.DataAnalyzingIterator {
 		currentURL = src;
 		derefCxt = _derefCxt; 
 		counter = 0;
-		si = new SourceIndexJenaImpl();
+		si = Main.getDB();
 		System.out.println(globalcounter);
 	}
 
