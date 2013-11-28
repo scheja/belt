@@ -183,6 +183,18 @@ public class Database implements SourceIndex, DictionaryListener {
 			throw new DatabaseException("Could not close database connection", e);
 		}
 	}
+	
+	public boolean isConnected(int timeout) {
+		if (connection == null) {
+			return false;
+		} else {
+			try {
+				return connection.isValid(timeout);
+			} catch (SQLException e) {
+				throw new DatabaseException("Wrong value for timeout", e);
+			}
+		}
+	}
 
 	public void flushDictionary() {
 		Iterator<Integer> entries = dict.getNewIds().iterator();
@@ -429,7 +441,7 @@ public class Database implements SourceIndex, DictionaryListener {
 	public void dictionaryIdAdded() {
 		if (dict.getNewIdAmount() >= dictionaryFlushThreshold ) {
 			flushDictionary();
-			Logger.getLogger(getClass()).log(Level.INFO, "Flushing dictionary. Size: " + dict.size());
+			Logger.getLogger(getClass()).log(Level.DEBUG, "Flushing dictionary. Size: " + dict.size());
 		}
 	}
 }
