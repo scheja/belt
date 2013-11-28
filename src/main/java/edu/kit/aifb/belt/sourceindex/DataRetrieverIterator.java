@@ -98,9 +98,9 @@ public class DataRetrieverIterator extends DataAnalyzer.DataAnalyzingIterator {
 	@Override
 	protected void analyze(org.squin.dataset.Triple t) {
 		Node g = Node.createURI(currentURL.toString());
-		Node s = Node.createURI(((JenaIOBasedDerefContext) derefCxt).nodeDict.getNode(t.s).toString());
-		Node p = Node.createURI(((JenaIOBasedDerefContext) derefCxt).nodeDict.getNode(t.p).toString());
-		Node o = Node.createURI(((JenaIOBasedDerefContext) derefCxt).nodeDict.getNode(t.o).toString());
+		Node s = ((JenaIOBasedDerefContext) derefCxt).nodeDict.getNode(t.s);
+		Node p = ((JenaIOBasedDerefContext) derefCxt).nodeDict.getNode(t.p);
+		Node o = ((JenaIOBasedDerefContext) derefCxt).nodeDict.getNode(t.o);
 		if (g.toString() != "" && s.toString() != "" && p.toString() != "" && o.toString() != "") {
 			si.addQuad(g, s, p, o);
 		}

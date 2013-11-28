@@ -188,7 +188,7 @@ abstract public class DerefTaskBase extends TaskBase<DereferencingResult>
                     null);
 		} else {
 			// switch to stop if nothing is found in the DB
-			boolean stop = true;
+			boolean stop = false;
 			if (stop) {
 				String errmsg = "Unexpected response code (" + 404 + ") for URI <" + url.toString() + "> (ID: " + uriID + ").";
 				log.debug( errmsg );
