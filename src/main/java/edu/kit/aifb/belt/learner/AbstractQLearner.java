@@ -12,8 +12,9 @@ import edu.kit.aifb.belt.db.QValue;
 import edu.kit.aifb.belt.db.StateChain;
 
 /**
- * Multithreading capable QLearner.
- * Any number of threads can add jobs simultaneously. Jobs are executed by a single thread.
+ * Multithreading capable QLearner. Any number of threads can add jobs
+ * simultaneously. Jobs are executed by a single thread.
+ * 
  * @author sibbo
  */
 public abstract class AbstractQLearner implements Runnable {
@@ -45,7 +46,7 @@ public abstract class AbstractQLearner implements Runnable {
 		}
 
 		stop = false;
-		
+
 		self = new Thread(this);
 		self.start();
 	}
@@ -67,11 +68,15 @@ public abstract class AbstractQLearner implements Runnable {
 	 */
 	public void updateQ(StateChain history, Action action, StateChain future, double reward, double learningRate,
 			double discountFactor) {
-		queue.offer(new QLearnJob(history, action, future, reward, learningRate, discountFactor));
+		if (!stop) {
+			queue.offer(new QLearnJob(history, action, future, reward, learningRate, discountFactor));
+		}
 	}
 
 	public void updateQ(QValue q, double reward, double learningRate, double discountFactor) {
-		updateQ(q.getHistory(), q.getAction(), q.getFuture(), reward, learningRate, discountFactor);
+		if (!stop) {
+			updateQ(q.getHistory(), q.getAction(), q.getFuture(), reward, learningRate, discountFactor);
+		}
 	}
 
 	/**

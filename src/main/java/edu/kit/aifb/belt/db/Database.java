@@ -107,13 +107,13 @@ public class Database implements SourceIndex, DictionaryListener {
 		try {
 			Class.forName(DRIVER);
 
-			connection = DriverManager.getConnection("jdbc:mysql://" + host, user, password);
+			connection = DriverManager.getConnection("jdbc:mysql://" + host + "?useUnicode=true&characterEncoding=utf-8", user, password);
 
 			// Create tables
 			Statement stmt = connection.createStatement();
-			stmt.execute("CREATE TABLE IF NOT EXISTS QTable (id INT PRIMARY KEY AUTO_INCREMENT, history BLOB, action BLOB, future BLOB, q DOUBLE, updateCount INT)");
-			stmt.execute("CREATE TABLE IF NOT EXISTS DictionaryTable (id INT PRIMARY KEY, value TEXT)");
-			stmt.execute("CREATE TABLE IF NOT EXISTS SourceIndexTable (id INT PRIMARY KEY AUTO_INCREMENT, subject INT, predicate INT, object INT, context INT)");
+			stmt.execute("CREATE TABLE IF NOT EXISTS QTable (id INT PRIMARY KEY AUTO_INCREMENT, history BLOB, action BLOB, future BLOB, q DOUBLE, updateCount INT, INDEX (history(254), action(254), future(254)), INDEX (history(254))) DEFAULT CHARSET=utf8");
+			stmt.execute("CREATE TABLE IF NOT EXISTS DictionaryTable (id INT PRIMARY KEY, value TEXT, INDEX (value(254))) DEFAULT CHARSET=utf8");
+			stmt.execute("CREATE TABLE IF NOT EXISTS SourceIndexTable (id INT PRIMARY KEY AUTO_INCREMENT, subject INT, predicate INT, object INT, context INT, INDEX (context)) DEFAULT CHARSET=utf8");
 
 			insertQStatement = connection
 					.prepareStatement("INSERT INTO QTable (history, action, future, q, updateCount) VALUES (?, ?, ?, ?, ?)");
@@ -181,6 +181,18 @@ public class Database implements SourceIndex, DictionaryListener {
 			connection = null;
 		} catch (SQLException e) {
 			throw new DatabaseException("Could not close database connection", e);
+		}
+	}
+	
+	public boolean isConnected(int timeout) {
+		if (connection == null) {
+			return false;
+		} else {
+			try {
+				return connection.isValid(timeout);
+			} catch (SQLException e) {
+				throw new DatabaseException("Wrong value for timeout", e);
+			}
 		}
 	}
 
@@ -429,7 +441,7 @@ public class Database implements SourceIndex, DictionaryListener {
 	public void dictionaryIdAdded() {
 		if (dict.getNewIdAmount() >= dictionaryFlushThreshold ) {
 			flushDictionary();
-			Logger.getLogger(getClass()).log(Level.INFO, "Flushing dictionary. Size: " + dict.size());
+			Logger.getLogger(getClass()).log(Level.DEBUG, "Flushing dictionary. Size: " + dict.size());
 		}
 	}
 }

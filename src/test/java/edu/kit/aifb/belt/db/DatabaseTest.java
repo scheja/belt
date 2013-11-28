@@ -82,7 +82,7 @@ public class DatabaseTest {
 
 		Quad q = new Quad(Node.createURI("c"), Node.createURI("s"), Node.createURI("p"), Node.createURI("o"));
 		Quad q2 = new Quad(Node.createURI("d"), Node.createURI("s"), Node.createURI("p"), Node.createURI("o"));
-		
+
 		db.deleteQuad(q);
 		db.deleteQuad(q2);
 
@@ -99,7 +99,7 @@ public class DatabaseTest {
 
 		size = iteratorSize(s.findAllByURI("c"));
 		assertEquals("Wrong number of quads inserted.", 1, size);
-		
+
 		s.updateURIs("c", "d");
 		size = iteratorSize(s.findAllByURI("d"));
 		assertEquals("Wrong number of quads found with new uri.", 1, size);
@@ -115,7 +115,7 @@ public class DatabaseTest {
 
 		return size;
 	}
-	
+
 	@AfterClass
 	public static void tearDownAfterClass() {
 		db.close();

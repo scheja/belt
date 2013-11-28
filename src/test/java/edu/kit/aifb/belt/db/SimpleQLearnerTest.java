@@ -14,6 +14,7 @@ public class SimpleQLearnerTest implements DatabaseListener {
 		Database db = new Database("janscheurenbrand.de/belt");	
 		db.connect();
 		AbstractQLearner learner = new SimpleQLearner(Long.MAX_VALUE, db, this);
+		learner.start();
 		QValue q = new QValue(new StateChain(new State("a.de", "human", db.getDictionary(), "school")), new Action("b.de", "hasFriend", db.getDictionary()), new StateChain(new State(null, "human",db.getDictionary(), "school")));
 		
 		// Set q to zero.
@@ -23,6 +24,8 @@ public class SimpleQLearnerTest implements DatabaseListener {
 		
 		db.getQ(q);
 		assertNotEquals("Q Value didn't change during learning process.", 0, q.getQ());
+		learner.stop();
+		db.close();
 	}
 
 	public void databaseFull() {
