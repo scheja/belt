@@ -9,6 +9,7 @@ import org.squin.command.modules.ModMonitor;
 import org.squin.dataset.QueriedDataset;
 import org.squin.dataset.hashimpl.combined.QueriedDatasetImpl;
 import org.squin.dataset.jenacommon.JenaIOBasedQueriedDataset;
+import org.squin.dataset.jenacommon.NodeDictionary;
 import org.squin.engine.LinkTraversalBasedQueryEngine;
 import org.squin.engine.LinkedDataCacheWrappingDataset;
 import org.squin.ldcache.jenaimpl.JenaIOBasedLinkedDataCache;
@@ -19,6 +20,7 @@ import com.hp.hpl.jena.query.QueryExecutionFactory;
 import com.hp.hpl.jena.query.ResultSet;
 import com.hp.hpl.jena.query.ResultSetFormatter;
 
+import edu.kit.aifb.belt.db.Database;
 import edu.kit.aifb.belt.sourceindex.SourceIndexJenaImpl;
 
 /**
@@ -35,6 +37,9 @@ public class Main {
 	 * @param args
 	 */
 	public static void main(String[] args) {
+		Database db = new Database("janscheurenbrand.de/belt");
+		db.connect();
+		
 		String queryString1 = "PREFIX swc: <http://data.semanticweb.org/ns/swc/ontology#>\n"
 				+ "PREFIX swrc: <http://swrc.ontoware.org/ontology#>\n"
 				+ "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n"
@@ -58,7 +63,7 @@ public class Main {
 				+ "}\n";
 		
 		// Step one: Get the URIs needed for this Query.
-		getURIsFromQuery(queryString2, "urls.txt");
+		getURIsFromQuery(queryString2, "urls.txt", db.getDictionary());
 		
 		// Step two: Load the triples from those URIs
 		// DataRetrieverIterator.deserialize("urls.txt");
@@ -72,15 +77,16 @@ public class Main {
 //			System.out.println(res.next());
 //		}
 		
+		db.close();
 	}
 
 
-	private static void getURIsFromQuery(String queryString, String path) {
+	private static void getURIsFromQuery(String queryString, String path, NodeDictionary dict) {
 		LinkTraversalBasedQueryEngine.register();
 
 		QueriedDataset qds = new QueriedDatasetImpl();
 		JenaIOBasedQueriedDataset qdsWrapper = new JenaIOBasedQueriedDataset(
-				qds);
+				qds, dict);
 		JenaIOBasedLinkedDataCache ldcache = new JenaIOBasedLinkedDataCache(
 				qdsWrapper);
 

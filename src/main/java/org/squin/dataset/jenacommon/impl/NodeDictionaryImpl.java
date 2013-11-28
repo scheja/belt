@@ -24,7 +24,6 @@ import org.squin.dataset.jenacommon.NodeDictionary;
 public class NodeDictionaryImpl implements NodeDictionary
 {
 	// members
-
 	final protected ArrayList<Node> dictId2Node = new ArrayList<Node> ();
 // 	final protected Map<String,Long> dictURINode2Id = new HashMap<String,Long> ();
 	final protected Map<String,Integer> dictURINode2Id = new HashMap<String,Integer> ();
