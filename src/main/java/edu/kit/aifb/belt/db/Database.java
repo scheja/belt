@@ -1,6 +1,7 @@
 package edu.kit.aifb.belt.db;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -11,23 +12,27 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Properties;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.apache.log4j.Priority;
 
 import com.google.common.collect.AbstractIterator;
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.sparql.core.Quad;
 
+import edu.kit.aifb.belt.db.dict.DictionaryListener;
 import edu.kit.aifb.belt.db.dict.StringDictionary;
 import edu.kit.aifb.belt.db.dict.StringDictionary.Entry;
 import edu.kit.aifb.belt.sourceindex.SourceIndex;
 
 /**
  * Connects to the database, provides standard functionality.
+ * Not thread-safe.
  * 
  * @author sibbo
  */
-public class Database implements SourceIndex {
+public class Database implements SourceIndex, DictionaryListener {
 	private static final String DRIVER = "com.mysql.jdbc.Driver";
 
 	private static final int BATCH_SIZE = 100;
@@ -39,6 +44,7 @@ public class Database implements SourceIndex {
 	private Connection connection;
 	private PreparedStatement insertQStatement;
 	private PreparedStatement updateQStatement;
+	private PreparedStatement clearQStatement;
 	private PreparedStatement getQStatement;
 	private PreparedStatement getBestActionQStatement;
 
@@ -50,8 +56,9 @@ public class Database implements SourceIndex {
 	private PreparedStatement getQuadByContextStatement;
 	private PreparedStatement replaceQuadContextStatement;
 
-	private StringDictionary dict = new StringDictionary();
-
+	private StringDictionary dict;
+	private int dictionaryFlushThreshold = Integer.MAX_VALUE;
+	
 	private long size;
 
 	/**
@@ -63,7 +70,9 @@ public class Database implements SourceIndex {
 
 		try {
 			Properties p = new Properties();
-			p.load(getClass().getResourceAsStream(".password"));
+			InputStream in = getClass().getResourceAsStream(".password");
+			p.load(in);
+			in.close();
 
 			user = p.getProperty("user");
 			password = p.getProperty("password");
@@ -103,19 +112,20 @@ public class Database implements SourceIndex {
 			// Create tables
 			Statement stmt = connection.createStatement();
 			stmt.execute("CREATE TABLE IF NOT EXISTS QTable (id INT PRIMARY KEY AUTO_INCREMENT, history BLOB, action BLOB, future BLOB, q DOUBLE, updateCount INT)");
-			stmt.execute("CREATE TABLE IF NOT EXISTS DictionaryTable (id BIGINT PRIMARY KEY, value TEXT)");
-			stmt.execute("CREATE TABLE IF NOT EXISTS SourceIndexTable (id INT PRIMARY KEY AUTO_INCREMENT, subject BIGINT, predicate BIGINT, object BIGINT, context BIGINT)");
+			stmt.execute("CREATE TABLE IF NOT EXISTS DictionaryTable (id INT PRIMARY KEY, value TEXT)");
+			stmt.execute("CREATE TABLE IF NOT EXISTS SourceIndexTable (id INT PRIMARY KEY AUTO_INCREMENT, subject INT, predicate INT, object INT, context INT)");
 
 			insertQStatement = connection
 					.prepareStatement("INSERT INTO QTable (history, action, future, q, updateCount) VALUES (?, ?, ?, ?, ?)");
 			updateQStatement = connection
 					.prepareStatement("UPDATE QTable SET q = ?, updateCount = ? WHERE history = ? AND action = ? AND future = ?");
+			clearQStatement = connection.prepareStatement("DELETE FROM QTable");
 			getQStatement = connection
 					.prepareStatement("SELECT q, updateCount FROM QTable WHERE history = ? AND action = ? AND future = ?");
 			getBestActionQStatement = connection
 					.prepareStatement("SELECT q FROM QTable WHERE history = ? ORDER BY q DESC LIMIT 1");
 
-			insertDictStatement = connection.prepareStatement("INSERT IGNORE INTO DictionaryTable (?, ?)");
+			insertDictStatement = connection.prepareStatement("INSERT IGNORE INTO DictionaryTable VALUES (?, ?)");
 
 			insertQuadStatement = connection
 					.prepareStatement("INSERT INTO SourceIndexTable (subject, predicate, object, context) VALUES (?, ?, ?, ?)");
@@ -130,17 +140,19 @@ public class Database implements SourceIndex {
 
 			final ResultSet entries = stmt.executeQuery("SELECT id, value FROM DictionaryTable");
 
+			dict = new StringDictionary(this);
+			
 			dict.load(new AbstractIterator<Entry>() {
 				@Override
 				protected Entry computeNext() {
 					try {
 						if (entries.next()) {
-							return dict.new Entry(entries.getLong(1), entries.getString(2));
+							return dict.new Entry(entries.getInt(1), entries.getString(2));
 						} else {
 							return endOfData();
 						}
 					} catch (SQLException e) {
-						Logger.getLogger(getClass().getName()).log(Level.WARNING, "Couldn't load dictionary", e);
+						Logger.getLogger(getClass().getName()).log(Level.WARN, "Couldn't load dictionary", e);
 
 						return endOfData();
 					}
@@ -162,6 +174,7 @@ public class Database implements SourceIndex {
 		}
 
 		flushDictionary();
+		dict = null;
 
 		try {
 			connection.close();
@@ -172,13 +185,13 @@ public class Database implements SourceIndex {
 	}
 
 	public void flushDictionary() {
-		Iterator<Long> entries = dict.getNewIds().iterator();
+		Iterator<Integer> entries = dict.getNewIds().iterator();
 
 		try {
 			while (entries.hasNext()) {
 				for (int i = 0; i < BATCH_SIZE && entries.hasNext(); i++) {
-					long entry = entries.next();
-					insertDictStatement.setLong(1, entry);
+					int entry = entries.next();
+					insertDictStatement.setInt(1, entry);
 					insertDictStatement.setString(2, dict.getString(entry));
 					insertDictStatement.addBatch();
 				}
@@ -317,6 +330,14 @@ public class Database implements SourceIndex {
 			throw new DatabaseException("Error while fetching best q value.", e);
 		}
 	}
+	
+	public void clearQTable() {
+		try {
+			clearQStatement.execute();
+		} catch (SQLException e) {
+			throw new DatabaseException("Could not delete qtable", e);
+		}
+	}
 
 	/**
 	 * Returns the size of the stored values in byte.
@@ -333,18 +354,18 @@ public class Database implements SourceIndex {
 
 	public void addQuad(Node g, Node s, Node p, Node o) {
 		try {
-			getQuadStatement.setLong(1, dict.getId(s.toString()));
-			getQuadStatement.setLong(2, dict.getId(p.toString()));
-			getQuadStatement.setLong(3, dict.getId(o.toString()));
-			getQuadStatement.setLong(4, dict.getId(g.toString()));
+			getQuadStatement.setInt(1, dict.getId(s.toString()));
+			getQuadStatement.setInt(2, dict.getId(p.toString()));
+			getQuadStatement.setInt(3, dict.getId(o.toString()));
+			getQuadStatement.setInt(4, dict.getId(g.toString()));
 
 			ResultSet result = getQuadStatement.executeQuery();
 
 			if (!result.next()) {
-				insertQuadStatement.setLong(1, dict.getId(s.toString()));
-				insertQuadStatement.setLong(2, dict.getId(p.toString()));
-				insertQuadStatement.setLong(3, dict.getId(o.toString()));
-				insertQuadStatement.setLong(4, dict.getId(g.toString()));
+				insertQuadStatement.setInt(1, dict.getId(s.toString()));
+				insertQuadStatement.setInt(2, dict.getId(p.toString()));
+				insertQuadStatement.setInt(3, dict.getId(o.toString()));
+				insertQuadStatement.setInt(4, dict.getId(g.toString()));
 
 				insertQuadStatement.execute();
 			}
@@ -354,15 +375,15 @@ public class Database implements SourceIndex {
 			throw new DatabaseException("Could not insert quad.", e);
 		}
 	}
-	
+
 	public void deleteQuad(Quad q) {
 		try {
-				deleteQuadStatement.setLong(1, dict.getId(q.getSubject().toString()));
-				deleteQuadStatement.setLong(2, dict.getId(q.getPredicate().toString()));
-				deleteQuadStatement.setLong(3, dict.getId(q.getObject().toString()));
-				deleteQuadStatement.setLong(4, dict.getId(q.getGraph().toString()));
+			deleteQuadStatement.setInt(1, dict.getId(q.getSubject().toString()));
+			deleteQuadStatement.setInt(2, dict.getId(q.getPredicate().toString()));
+			deleteQuadStatement.setInt(3, dict.getId(q.getObject().toString()));
+			deleteQuadStatement.setInt(4, dict.getId(q.getGraph().toString()));
 
-				deleteQuadStatement.execute();
+			deleteQuadStatement.execute();
 		} catch (SQLException e) {
 			throw new DatabaseException("Could not insert quad.", e);
 		}
@@ -372,13 +393,13 @@ public class Database implements SourceIndex {
 		Collection<Quad> result = new ArrayList<Quad>();
 
 		try {
-			getQuadByContextStatement.setLong(1, dict.getId(uri));
+			getQuadByContextStatement.setInt(1, dict.getId(uri));
 			ResultSet quads = getQuadByContextStatement.executeQuery();
 
 			while (quads.next()) {
-				result.add(new Quad(Node.createURI(dict.getString(quads.getLong(4))), Node.createURI(dict
-						.getString(quads.getLong(1))), Node.createURI(dict.getString(quads.getLong(2))), Node
-						.createURI(dict.getString(quads.getLong(3)))));
+				result.add(new Quad(Node.createURI(dict.getString(quads.getInt(4))), Node.createURI(dict
+						.getString(quads.getInt(1))), Node.createURI(dict.getString(quads.getInt(2))), Node
+						.createURI(dict.getString(quads.getInt(3)))));
 			}
 
 			quads.close();
@@ -391,13 +412,24 @@ public class Database implements SourceIndex {
 
 	public void updateURIs(String from, String to) {
 		try {
-			replaceQuadContextStatement.setLong(1, dict.getId(to));
-			replaceQuadContextStatement.setLong(2, dict.getId(from));
+			replaceQuadContextStatement.setInt(1, dict.getId(to));
+			replaceQuadContextStatement.setInt(2, dict.getId(from));
 
 			replaceQuadContextStatement.execute();
 		} catch (SQLException e) {
 			throw new DatabaseException("Could not update URIs.", e);
 		}
 
+	}
+	
+	public void setDictionaryFlushThreshold(int dictionaryFlushThreshold) {
+		this.dictionaryFlushThreshold = dictionaryFlushThreshold;
+	}
+
+	public void dictionaryIdAdded() {
+		if (dict.getNewIdAmount() >= dictionaryFlushThreshold ) {
+			flushDictionary();
+			Logger.getLogger(getClass()).log(Level.INFO, "Flushing dictionary. Size: " + dict.size());
+		}
 	}
 }

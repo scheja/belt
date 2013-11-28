@@ -9,8 +9,8 @@ import edu.kit.aifb.belt.db.dict.StringDictionary;
 public class Action {
 	private static final String SEPARATOR = "§";
 
-	private long url;
-	private long property;
+	private int url;
+	private int property;
 
 	public Action(String url, String property, StringDictionary dict) {
 		this.url = dict.getId(url);

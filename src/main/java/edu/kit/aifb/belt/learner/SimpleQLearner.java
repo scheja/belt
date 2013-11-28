@@ -8,16 +8,24 @@ import edu.kit.aifb.belt.db.StateChain;
 public class SimpleQLearner extends AbstractQLearner {
 	private long maxDbSize;
 	private Database db;
+	private DatabaseListener listener;
+	private volatile boolean listenerInformed = false;
 
-	public SimpleQLearner(long maxDbSize, Database db) {
+	public SimpleQLearner(long maxDbSize, Database db, DatabaseListener listener) {
 		this.maxDbSize = maxDbSize;
 		this.db = db;
+		this.listener = listener;
 	}
 	
 	
-	public boolean updateQ(StateChain history, Action action, StateChain future, double reward, double learningRate, double discountFactor) {
+	protected void updateQInternal(StateChain history, Action action, StateChain future, double reward, double learningRate, double discountFactor) {
 		if (db.getSize() > maxDbSize) {
-			return false;
+			if (!listenerInformed) {
+				listenerInformed = true;
+				listener.databaseFull();
+			}
+			
+			return;
 		}
 		
 		if (history.size() < 1 || future.size() < 1) {
@@ -43,7 +51,5 @@ public class SimpleQLearner extends AbstractQLearner {
 		q.setQ(q.getQ() + learningRate * (reward + discountFactor * bestFutureQ - q.getQ()));
 		
 		db.updateQ(q);
-		
-		return true;
 	}
 }
