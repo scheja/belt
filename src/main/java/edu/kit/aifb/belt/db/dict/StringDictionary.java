@@ -28,6 +28,13 @@ public class StringDictionary implements NodeDictionary {
 	private HashFunction murmur3 = Hashing.murmur3_128();
 	
 	private List<Integer> newIds = new ArrayList<Integer>();
+	private DictionaryListener listener;
+	
+	public StringDictionary(){this(null);}
+	
+	public StringDictionary(DictionaryListener listener) {
+		this.listener = listener;
+	}
 	
 	public synchronized void load(Iterator<Entry> iter) {
 		while (iter.hasNext()) {
@@ -48,6 +55,10 @@ public class StringDictionary implements NodeDictionary {
 	
 	public synchronized void clearNewIds() {
 		newIds.clear();
+	}
+	
+	public synchronized int getNewIdAmount() {
+		return newIds.size();
 	}
 
 	public synchronized String getString(int id) {
@@ -95,6 +106,11 @@ public class StringDictionary implements NodeDictionary {
 			stringToIdMap.put(value, id);
 			
 			newIds.add(id);
+			
+			if (listener != null) {
+				listener.dictionaryIdAdded();
+			}
+			
 			return id;
 		} catch (UnsupportedEncodingException e) {
 			// Everyone supports UTF-8
@@ -123,6 +139,10 @@ public class StringDictionary implements NodeDictionary {
 		StatisticsImpl.AttributeList statAttrs = new StatisticsImpl.AttributeList();
 		statAttrs.add( "size", size );
 		return new StatisticsImpl( statAttrs );
+	}
+
+	public synchronized int size() {
+		return idToStringMap.size();
 	}
 	
 	public class Entry {

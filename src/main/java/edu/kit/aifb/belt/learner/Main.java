@@ -39,6 +39,7 @@ public class Main {
 	public static void main(String[] args) {
 		Database db = new Database("janscheurenbrand.de/belt");
 		db.connect();
+		db.setDictionaryFlushThreshold(100);
 		
 		String queryString1 = "PREFIX swc: <http://data.semanticweb.org/ns/swc/ontology#>\n"
 				+ "PREFIX swrc: <http://swrc.ontoware.org/ontology#>\n"

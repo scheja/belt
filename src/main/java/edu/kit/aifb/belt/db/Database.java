@@ -21,6 +21,7 @@ import com.google.common.collect.AbstractIterator;
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.sparql.core.Quad;
 
+import edu.kit.aifb.belt.db.dict.DictionaryListener;
 import edu.kit.aifb.belt.db.dict.StringDictionary;
 import edu.kit.aifb.belt.db.dict.StringDictionary.Entry;
 import edu.kit.aifb.belt.sourceindex.SourceIndex;
@@ -31,7 +32,7 @@ import edu.kit.aifb.belt.sourceindex.SourceIndex;
  * 
  * @author sibbo
  */
-public class Database implements SourceIndex {
+public class Database implements SourceIndex, DictionaryListener {
 	private static final String DRIVER = "com.mysql.jdbc.Driver";
 
 	private static final int BATCH_SIZE = 100;
@@ -43,6 +44,7 @@ public class Database implements SourceIndex {
 	private Connection connection;
 	private PreparedStatement insertQStatement;
 	private PreparedStatement updateQStatement;
+	private PreparedStatement clearQStatement;
 	private PreparedStatement getQStatement;
 	private PreparedStatement getBestActionQStatement;
 
@@ -55,7 +57,8 @@ public class Database implements SourceIndex {
 	private PreparedStatement replaceQuadContextStatement;
 
 	private StringDictionary dict;
-
+	private int dictionaryFlushThreshold = Integer.MAX_VALUE;
+	
 	private long size;
 
 	/**
@@ -116,6 +119,7 @@ public class Database implements SourceIndex {
 					.prepareStatement("INSERT INTO QTable (history, action, future, q, updateCount) VALUES (?, ?, ?, ?, ?)");
 			updateQStatement = connection
 					.prepareStatement("UPDATE QTable SET q = ?, updateCount = ? WHERE history = ? AND action = ? AND future = ?");
+			clearQStatement = connection.prepareStatement("DELETE FROM QTable");
 			getQStatement = connection
 					.prepareStatement("SELECT q, updateCount FROM QTable WHERE history = ? AND action = ? AND future = ?");
 			getBestActionQStatement = connection
@@ -136,7 +140,7 @@ public class Database implements SourceIndex {
 
 			final ResultSet entries = stmt.executeQuery("SELECT id, value FROM DictionaryTable");
 
-			dict = new StringDictionary();
+			dict = new StringDictionary(this);
 			
 			dict.load(new AbstractIterator<Entry>() {
 				@Override
@@ -326,6 +330,14 @@ public class Database implements SourceIndex {
 			throw new DatabaseException("Error while fetching best q value.", e);
 		}
 	}
+	
+	public void clearQTable() {
+		try {
+			clearQStatement.execute();
+		} catch (SQLException e) {
+			throw new DatabaseException("Could not delete qtable", e);
+		}
+	}
 
 	/**
 	 * Returns the size of the stored values in byte.
@@ -408,5 +420,16 @@ public class Database implements SourceIndex {
 			throw new DatabaseException("Could not update URIs.", e);
 		}
 
+	}
+	
+	public void setDictionaryFlushThreshold(int dictionaryFlushThreshold) {
+		this.dictionaryFlushThreshold = dictionaryFlushThreshold;
+	}
+
+	public void dictionaryIdAdded() {
+		if (dict.getNewIdAmount() >= dictionaryFlushThreshold ) {
+			flushDictionary();
+			Logger.getLogger(getClass()).log(Level.INFO, "Flushing dictionary. Size: " + dict.size());
+		}
 	}
 }
