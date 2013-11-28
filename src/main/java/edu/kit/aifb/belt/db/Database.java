@@ -12,8 +12,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Properties;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.apache.log4j.Priority;
 
 import com.google.common.collect.AbstractIterator;
 import com.hp.hpl.jena.graph.Node;
@@ -146,7 +148,7 @@ public class Database implements SourceIndex {
 							return endOfData();
 						}
 					} catch (SQLException e) {
-						Logger.getLogger(getClass().getName()).log(Level.WARNING, "Couldn't load dictionary", e);
+						Logger.getLogger(getClass().getName()).log(Level.WARN, "Couldn't load dictionary", e);
 
 						return endOfData();
 					}
