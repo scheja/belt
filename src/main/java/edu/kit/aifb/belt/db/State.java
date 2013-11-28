@@ -16,12 +16,12 @@ import edu.kit.aifb.belt.db.dict.StringDictionary;
  * @author sibbo
  */
 public class State {
-	private long[] properties;
-	private long domain;
-	private long type;
+	private int[] properties;
+	private int domain;
+	private int type;
 
 	public State(String domain, String type, Collection<String> properties, StringDictionary dict) {
-		this.properties = new long[properties.size()];
+		this.properties = new int[properties.size()];
 
 		int i = 0;
 		for (String s : properties) {
@@ -38,7 +38,7 @@ public class State {
 		this(domain, type, Arrays.asList(properties), dict);
 	}
 
-	public State(long domain, long type, long[] properties) {
+	public State(int domain, int type, int[] properties) {
 		this.domain = domain;
 		this.type = type;
 		this.properties = properties;
@@ -49,7 +49,7 @@ public class State {
 	public Multiset<String> getProperties(StringDictionary dict) {
 		Multiset<String> set = HashMultiset.create();
 
-		for (long l : properties) {
+		for (int l : properties) {
 			set.add(dict.getString(l));
 		}
 		

@@ -9,17 +9,27 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.squin.common.Statistics;
+import org.squin.common.impl.StatisticsImpl;
+import org.squin.dataset.jenacommon.NodeDictionary;
+
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
+import com.hp.hpl.jena.graph.Node;
 
-public class StringDictionary {
-	private Map<String, Long> stringToIdMap = new HashMap<String, Long>();
-	private Map<Long, String> idToStringMap = new HashMap<Long, String>();
+/**
+ * A simple dictionary mapping from string to int. Thread-safe.
+ * 
+ * @author sibbo
+ */
+public class StringDictionary implements NodeDictionary {
+	private Map<String, Integer> stringToIdMap = new HashMap<String, Integer>();
+	private Map<Integer, String> idToStringMap = new HashMap<Integer, String>();
 	private HashFunction murmur3 = Hashing.murmur3_128();
 	
-	private List<Long> newIds = new ArrayList<Long>();
+	private List<Integer> newIds = new ArrayList<Integer>();
 	
-	public void load(Iterator<Entry> iter) {
+	public synchronized void load(Iterator<Entry> iter) {
 		while (iter.hasNext()) {
 			Entry entry = iter.next();
 			
@@ -27,38 +37,20 @@ public class StringDictionary {
 			idToStringMap.put(entry.getId(), entry.getValue());
 		}
 	}
-	
-	public class Entry {
-		private long id;
-		private String value;
-		
-		public Entry(long id, String value) {
-			this.id = id;
-			this.value = value;
-		}
 
-		public long getId() {
-			return id;
-		}
-
-		public String getValue() {
-			return value;
-		}
-	}
-
-	public Set<Long> getIds() {
+	public synchronized Set<Integer> getIds() {
 		return idToStringMap.keySet();
 	}
 	
-	public Collection<Long> getNewIds() {
+	public synchronized Collection<Integer> getNewIds() {
 		return newIds;
 	}
 	
-	public void clearNewIds() {
+	public synchronized void clearNewIds() {
 		newIds.clear();
 	}
 
-	public String getString(long id) {
+	public synchronized String getString(int id) {
 		if (id == 0) {
 			return null;
 		}
@@ -77,12 +69,12 @@ public class StringDictionary {
 	 * @param value The string.
 	 * @return A unique id for the string.
 	 */
-	public long getId(String value) {
+	public synchronized int getId(String value) {
 		if (value == null) {
 			return 0;
 		}
 		
-		Long result = stringToIdMap.get(value);
+		Integer result = stringToIdMap.get(value);
 		
 		if (result == null) {
 			result = createId(value);
@@ -91,9 +83,9 @@ public class StringDictionary {
 		return result;
 	}
 
-	private Long createId(String value) {
+	private synchronized int createId(String value) {
 		try {
-			long id = murmur3.hashBytes(value.getBytes("UTF-8")).asLong();
+			int id = murmur3.hashBytes(value.getBytes("UTF-8")).asInt();
 			
 			while (idToStringMap.get(id) != null || id == 0) {
 				id++;
@@ -107,6 +99,47 @@ public class StringDictionary {
 		} catch (UnsupportedEncodingException e) {
 			// Everyone supports UTF-8
 			throw new RuntimeException(e);
+		}
+	}
+
+	public synchronized Node getNode(int id) {
+		return Node.createURI(getString(id));
+	}
+
+	public synchronized int getId(Node n) {
+		return getId(n.toString());
+	}
+
+	public synchronized int createId(Node n) {
+		return getId(n.toString());
+	}
+
+	public synchronized Statistics getStatistics() {
+		int size;
+		synchronized ( this ) {
+			size = idToStringMap.size();
+		}
+
+		StatisticsImpl.AttributeList statAttrs = new StatisticsImpl.AttributeList();
+		statAttrs.add( "size", size );
+		return new StatisticsImpl( statAttrs );
+	}
+	
+	public class Entry {
+		private int id;
+		private String value;
+		
+		public Entry(int id, String value) {
+			this.id = id;
+			this.value = value;
+		}
+
+		public int getId() {
+			return id;
+		}
+
+		public String getValue() {
+			return value;
 		}
 	}
 }
