@@ -69,6 +69,11 @@ public class FixedSizeSolutionMappingImpl implements SolutionMapping
 	{
 		return map[varId];
 	}
+	
+	// Added by jsc
+	public int[] getMap() {
+		return map;
+	}
 
 	public BindingProvenance getProvenance ( int varId )
 	{
