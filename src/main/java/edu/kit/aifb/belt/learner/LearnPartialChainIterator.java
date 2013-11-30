@@ -18,6 +18,7 @@ import com.hp.hpl.jena.graph.Node;
 
 import edu.kit.aifb.belt.db.Action;
 import edu.kit.aifb.belt.db.State;
+import edu.kit.aifb.belt.db.StateFactory;
 import edu.kit.aifb.belt.db.dict.StringDictionary;
 
 public class LearnPartialChainIterator {
@@ -75,7 +76,8 @@ public class LearnPartialChainIterator {
 			String domain = url.getHost();
 			
 			Action action = new Action(domain, t.p, ((StringDictionary)ltbExecCxt.nodeDict));
-					
+			StateFactory fac = new StateFactory(Integer.MAX_VALUE, true);
+			
 			log.info("Match: <{}> (n{}) / <{}> (n{}) / <{}> (n{})", new Object[]{s, t.s, p, t.p, o , t.o});		
 		} catch (MalformedURLException e) {
 			// TODO Auto-generated catch block
