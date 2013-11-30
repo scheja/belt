@@ -40,8 +40,8 @@ public class Action {
 		DataOutputStream data = new DataOutputStream(out);
 		
 		try {
-			data.writeLong(domain);
-			data.writeLong(property);
+			data.writeInt(domain);
+			data.writeInt(property);
 		} catch (IOException e) {
 			// No actual IO involved.
 			throw new RuntimeException(e);
