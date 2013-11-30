@@ -20,7 +20,7 @@ public class SimpleQLearner extends AbstractQLearner {
 	
 	protected void updateQInternal(StateChain history, Action action, StateChain future, double reward, double learningRate, double discountFactor) {
 		if (db.getSize() > maxDbSize) {
-			if (!listenerInformed) {
+			if (!listenerInformed && listener != null) {
 				listenerInformed = true;
 				listener.databaseFull();
 			}
