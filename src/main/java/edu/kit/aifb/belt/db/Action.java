@@ -9,20 +9,26 @@ import edu.kit.aifb.belt.db.dict.StringDictionary;
 public class Action {
 	private static final String SEPARATOR = "§";
 
-	private int url;
+	private int domain;
 	private int property;
 
-	public Action(String url, String property, StringDictionary dict) {
-		this.url = dict.getId(url);
+	public Action(String domain, String property, StringDictionary dict) {
+		this.domain = dict.getId(domain);
 		this.property = dict.getId(property);
+	}
+	
+	// In LearnPartialChainIterator#learn the ID of the property is already present, so let's use it
+	public Action(String domain, int property_id, StringDictionary dict) {
+		this.domain = dict.getId(domain);
+		this.property = property_id;
 	}
 
 	public String toString() {
-		return url + SEPARATOR + property;
+		return domain + SEPARATOR + property;
 	}
 
 	public String getUrl(StringDictionary dict) {
-		return dict.getString(url);
+		return dict.getString(domain);
 	}
 
 	public String getProperty(StringDictionary dict) {
@@ -34,7 +40,7 @@ public class Action {
 		DataOutputStream data = new DataOutputStream(out);
 		
 		try {
-			data.writeLong(url);
+			data.writeLong(domain);
 			data.writeLong(property);
 		} catch (IOException e) {
 			// No actual IO involved.

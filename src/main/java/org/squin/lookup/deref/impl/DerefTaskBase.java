@@ -35,7 +35,9 @@ import org.squin.lookup.deref.jenaimpl.JenaIOBasedDerefTask.TripleMaterializer;
 
 import com.hp.hpl.jena.sparql.core.Quad;
 
+import edu.kit.aifb.belt.learner.Main;
 import edu.kit.aifb.belt.sourceindex.DataRetrieverIterator;
+import edu.kit.aifb.belt.sourceindex.SourceIndex;
 import edu.kit.aifb.belt.sourceindex.SourceIndexJenaImpl;
 
 
@@ -166,7 +168,7 @@ abstract public class DerefTaskBase extends TaskBase<DereferencingResult>
 	{
 		log.debug( "Started to dereference the URI <{}> (ID: {}).", url.toString(), uriID );
 		
-		SourceIndexJenaImpl si = new SourceIndexJenaImpl();
+		SourceIndex si = Main.getDB();
 		Iterator<Quad> res = si.findAllByURI(url.toString());
 		int counter = 0;
 		TripleMaterializer tm = new TripleMaterializer( ((JenaIOBasedDerefContext) derefCxt).nodeDict );
