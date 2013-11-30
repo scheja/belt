@@ -21,7 +21,6 @@ import com.hp.hpl.jena.query.ResultSet;
 import com.hp.hpl.jena.query.ResultSetFormatter;
 
 import edu.kit.aifb.belt.db.Database;
-import edu.kit.aifb.belt.sourceindex.SourceIndexJenaImpl;
 
 /**
  * @author janscheurenbrand

@@ -38,7 +38,6 @@ import com.hp.hpl.jena.sparql.core.Quad;
 import edu.kit.aifb.belt.learner.Main;
 import edu.kit.aifb.belt.sourceindex.DataRetrieverIterator;
 import edu.kit.aifb.belt.sourceindex.SourceIndex;
-import edu.kit.aifb.belt.sourceindex.SourceIndexJenaImpl;
 
 
 /**
@@ -462,7 +461,7 @@ abstract public class DerefTaskBase extends TaskBase<DereferencingResult>
 		                          locationField,
 		                          redirectionUriID } );
 		
-		SourceIndexJenaImpl.addRedirect(url.toString(), locationField);
+		Main.getDB().addRedirect(url.toString(), locationField);
 
 		return new Redirected( uriID,
 		                       getTimestamp(),
