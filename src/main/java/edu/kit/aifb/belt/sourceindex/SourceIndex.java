@@ -1,6 +1,8 @@
 package edu.kit.aifb.belt.sourceindex;
 
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Stack;
 
 import com.hp.hpl.jena.graph.Node;
@@ -16,7 +18,7 @@ import edu.kit.aifb.belt.sourceindex.SourceIndexJenaImpl.Redirection;
  */
 public interface SourceIndex {
 	
-	static Stack<Redirection> redirections = new Stack<Redirection>(); 
+	Map<String,String> redirections = new HashMap<String,String>(); 
 	
 	/**
 	 * Adds a Quad to the Source Index
@@ -36,15 +38,16 @@ public interface SourceIndex {
 	public Iterator<Quad> findAllByURI(String uri);
 	
 	/**
-	 * Updates the URIs of Quads in the Source Index
+	 * Queues the update of the URIs of Quads in the Source Index after a redirect
 	 * E.g. after a redirect
 	 * @param from
 	 * @param to
-	 */
-	public void updateURIs(String from, String to);
-	
+	 */		
 	public void addRedirect(String from, String to);
-		
+	
+	/**
+	 * Handles the redirections
+	 */		
 	public void handleRedirections();
 	
 }
