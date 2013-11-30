@@ -69,13 +69,12 @@ public class OpExecutor extends org.squin.dataset.query.arq.OpExecutor
 		VarDictionary varDict = ltbExecCxt.varDict;
 		NodeDictionary nodeDict = ltbExecCxt.nodeDict;
 		
-		l.info("New Step:");
 		l.info("opBGP Pattern: "+ opBGP.getPattern().toString());		
 		l.info("QueryIterator: "+ input.toString());
 
 		Iterator<SolutionMapping> qIt = new EncodeBindingsIterator( input, ltbExecCxt );
 		for ( Triple t : opBGP.getPattern().getList() ) {
- 			l.info("Created TPQI for Triple: <{}>", t.toString());
+ 			l.info("Created TPQI for Triple: <{}>", t.toString());			
  			qIt = new NaiveTriplePatternQueryIter( encode(t,varDict,nodeDict), qIt, ltbExecCxt );
 // 			qIt = new PrefetchingTriplePatternQueryIter( encode(t,varDict,nodeDict), qIt, ltbExecCxt );
 //			qIt = new PostponingTriplePatternQueryIter( encode(t,varDict,nodeDict), qIt, ltbExecCxt );
