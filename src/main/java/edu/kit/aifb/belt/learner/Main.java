@@ -64,20 +64,7 @@ public class Main {
 				+ "    ?dbporg <http://dbpedia.org/property/city> ?city"
 				+ "}\n";
 		
-		// Step one: Get the URIs needed for this Query.
-		getURIsFromQuery(queryString2, "urls.txt", db.getDictionary());
-		
-		// Step two: Load the triples from those URIs
-		// DataRetrieverIterator.deserialize("urls.txt");
-		
-		// SourceIndex.test();
-		
-//		SourceIndex si = new SourceIndex();
-//		Iterator<Quad> res = si.findAllByURI("http://people.aifb.kit.edu/awa/foaf.rdf");
-//		
-//		while (res.hasNext()) {
-//			System.out.println(res.next());
-//		}
+		learnQuery(queryString2, db.getDictionary());		
 		
 		db.close();
 	}
@@ -87,15 +74,11 @@ public class Main {
 	}
 
 
-	private static void getURIsFromQuery(String queryString, String path, NodeDictionary dict) {
+	private static void learnQuery(String queryString,NodeDictionary dict) {
 		LinkTraversalBasedQueryEngine.register();
-
 		QueriedDataset qds = new QueriedDatasetImpl();
-		JenaIOBasedQueriedDataset qdsWrapper = new JenaIOBasedQueriedDataset(
-				qds, dict);
-		JenaIOBasedLinkedDataCache ldcache = new JenaIOBasedLinkedDataCache(
-				qdsWrapper);
-
+		JenaIOBasedQueriedDataset qdsWrapper = new JenaIOBasedQueriedDataset(qds, dict);
+		JenaIOBasedLinkedDataCache ldcache = new JenaIOBasedLinkedDataCache(qdsWrapper);
 		Dataset dsARQ = new LinkedDataCacheWrappingDataset(ldcache);
 		
 		modMonitor.startTimer();
@@ -104,18 +87,14 @@ public class Main {
 		System.out.println(ResultSetFormatter.asText(results));
 		long time = modMonitor.endTimer();
 		
-		System.out.println( "Time: " + modMonitor.timeStr(time) + " sec" );
-		// System.out.println( "Statistics:" );
-		//ldcache.getStatistics().print( System.out, 1 );
+		System.out.println( "Time: " + modMonitor.timeStr(time) + " sec" );		
 		
-		SourceIndexJenaImpl.handleRedirections();
-		
+		db.handleRedirections();
 		
 		try {
-			ldcache.shutdownNow(4000); // 4 sec.
+			ldcache.shutdownNow(4000);
 		} catch (Exception e) {
-			System.err.println("Shutting down the Linked Data cache failed: "
-					+ e.getMessage());
+			System.err.println("Shutting down the Linked Data cache failed: " + e.getMessage());
 		}
 	}
 

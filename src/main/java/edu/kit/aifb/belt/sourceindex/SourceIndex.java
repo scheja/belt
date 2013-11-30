@@ -13,9 +13,7 @@ import com.hp.hpl.jena.sparql.core.Quad;
  *
  */
 public interface SourceIndex {
-	
-	Map<String,String> redirections = new HashMap<String,String>(); 
-	
+		
 	/**
 	 * Adds a Quad to the Source Index
 	 * @param g The URI of the original source containing the Quad

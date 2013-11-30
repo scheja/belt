@@ -73,12 +73,12 @@ public class SourceIndexJenaImpl implements SourceIndex {
 
 	}
 
-	public static void addRedirect(String from, String to) {
+	public void addRedirect(String from, String to) {
 		l.debug("Added Redirect from <{}> to <{}>", from, to);
 		redirections.push(new Redirection(from, to));
 	}
 	
-	public static void handleRedirections() {
+	public void handleRedirections() {
 		l.info("Now handling Redirections");
 		SourceIndexJenaImpl si = new SourceIndexJenaImpl();
 		while (!redirections.empty()) {
