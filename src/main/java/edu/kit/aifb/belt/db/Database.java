@@ -62,7 +62,7 @@ public class Database implements SourceIndex, DictionaryListener {
 	private StringDictionary dict;
 	private int dictionaryFlushThreshold = Integer.MAX_VALUE;
 
-	private Map<String, String> redirects = new HashMap<String, String>();
+	private Map<String, String> redirections = new HashMap<String, String>();
 
 	private long size;
 
