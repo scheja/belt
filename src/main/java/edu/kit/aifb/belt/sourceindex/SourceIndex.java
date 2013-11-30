@@ -1,9 +1,12 @@
 package edu.kit.aifb.belt.sourceindex;
 
 import java.util.Iterator;
+import java.util.Stack;
 
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.sparql.core.Quad;
+
+import edu.kit.aifb.belt.sourceindex.SourceIndexJenaImpl.Redirection;
 
 /**
  * @author janscheurenbrand
@@ -12,6 +15,8 @@ import com.hp.hpl.jena.sparql.core.Quad;
  *
  */
 public interface SourceIndex {
+	
+	static Stack<Redirection> redirections = new Stack<Redirection>(); 
 	
 	/**
 	 * Adds a Quad to the Source Index
@@ -37,5 +42,9 @@ public interface SourceIndex {
 	 * @param to
 	 */
 	public void updateURIs(String from, String to);
-
+	
+	public void addRedirect(String from, String to);
+		
+	public void handleRedirections();
+	
 }
