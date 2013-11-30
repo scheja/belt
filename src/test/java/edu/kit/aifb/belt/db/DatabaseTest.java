@@ -4,7 +4,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Set;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -26,16 +28,21 @@ public class DatabaseTest {
 
 	@Test
 	public void testInsert() {
-		QValue x = new QValue(new StateChain(new State("a", "a", db.getDictionary(), "past1", "past2"), new State("a",
-				"a", db.getDictionary(), "pastx"), new State("a", "a", db.getDictionary(), "pasty")), new Action(
-				"abc.de", "knows", db.getDictionary()), new StateChain(new State("a", "a", db.getDictionary(),
-				"future1", "future2"), new State("a", "a", db.getDictionary(), "futurex"), new State("a", "a",
+		Set<String> aSet = new HashSet<String>();
+		aSet.add("a");
+		Set<String> pasfsdSet = new HashSet<String>();
+		pasfsdSet.add("pasfsd");
+		
+		QValue x = new QValue(new StateChain(new State("a", aSet, db.getDictionary(), "past1", "past2"), new State("a",
+				aSet, db.getDictionary(), "pastx"), new State("a", aSet, db.getDictionary(), "pasty")), new Action(
+				"abc.de", "knows", db.getDictionary()), new StateChain(new State("a", aSet, db.getDictionary(),
+				"future1", "future2"), new State("a", aSet, db.getDictionary(), "futurex"), new State("a", aSet,
 				db.getDictionary(), "futurey")), 3);
 
-		QValue y = new QValue(new StateChain(new State("pafsd", "pasfsd", db.getDictionary()), new State("a", "a",
-				db.getDictionary(), "pastx"), new State("a", "a", db.getDictionary(), "pasty")), new Action("abc.de",
-				"knows", db.getDictionary()), new StateChain(new State("a", "a", db.getDictionary(), "future1",
-				"future2"), new State("a", "a", db.getDictionary(), "futurex"), new State("a", "a", db.getDictionary(),
+		QValue y = new QValue(new StateChain(new State("pafsd", pasfsdSet, db.getDictionary()), new State("a", aSet,
+				db.getDictionary(), "pastx"), new State("a", aSet, db.getDictionary(), "pasty")), new Action("abc.de",
+				"knows", db.getDictionary()), new StateChain(new State("a", aSet, db.getDictionary(), "future1",
+				"future2"), new State("a", aSet, db.getDictionary(), "futurex"), new State("a", aSet, db.getDictionary(),
 				"futurey")), 2);
 
 		db.updateQ(x, y);
@@ -52,16 +59,21 @@ public class DatabaseTest {
 
 	@Test
 	public void testStateSorting() {
-		QValue x = new QValue(new StateChain(new State("a", "a", db.getDictionary(), "past1", "past2"), new State("a",
-				"a", db.getDictionary(), "pastx"), new State("a", "a", db.getDictionary(), "pasty")), new Action(
-				"abc.de", "knows", db.getDictionary()), new StateChain(new State("a", "a", db.getDictionary(),
-				"future1", "future2"), new State("a", "a", db.getDictionary(), "futurex"), new State("a", "a",
+		Set<String> aSet = new HashSet<String>();
+		aSet.add("a");
+		Set<String> pasfsdSet = new HashSet<String>();
+		pasfsdSet.add("pasfsd");
+		
+		QValue x = new QValue(new StateChain(new State("a", aSet, db.getDictionary(), "past1", "past2"), new State("a",
+				aSet, db.getDictionary(), "pastx"), new State("a", aSet, db.getDictionary(), "pasty")), new Action(
+				"abc.de", "knows", db.getDictionary()), new StateChain(new State("a", aSet, db.getDictionary(),
+				"future1", "future2"), new State("a", aSet, db.getDictionary(), "futurex"), new State("a", aSet,
 				db.getDictionary(), "futurey")), 3);
 
-		QValue y = new QValue(new StateChain(new State("a", "a", db.getDictionary(), "past2", "past1"), new State("a",
-				"a", db.getDictionary(), "pastx"), new State("a", "a", db.getDictionary(), "pasty")), new Action(
-				"abc.de", "knows", db.getDictionary()), new StateChain(new State("a", "a", db.getDictionary(),
-				"future2", "future1"), new State("a", "a", db.getDictionary(), "futurex"), new State("a", "a",
+		QValue y = new QValue(new StateChain(new State("a", aSet, db.getDictionary(), "past2", "past1"), new State("a",
+				aSet, db.getDictionary(), "pastx"), new State("a", aSet, db.getDictionary(), "pasty")), new Action(
+				"abc.de", "knows", db.getDictionary()), new StateChain(new State("a", aSet, db.getDictionary(),
+				"future2", "future1"), new State("a", aSet, db.getDictionary(), "futurex"), new State("a", aSet,
 				db.getDictionary(), "futurey")), 2);
 
 		db.updateQ(x, y);
