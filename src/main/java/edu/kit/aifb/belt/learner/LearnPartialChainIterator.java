@@ -1,5 +1,7 @@
 package edu.kit.aifb.belt.learner;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -7,13 +9,16 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.squin.dataset.Triple;
-import org.squin.dataset.jenacommon.NodeDictionary;
 import org.squin.dataset.query.SolutionMapping;
 import org.squin.dataset.query.TriplePattern;
 import org.squin.dataset.query.impl.FixedSizeSolutionMappingImpl;
 import org.squin.engine.LinkTraversalBasedExecutionContext;
 
 import com.hp.hpl.jena.graph.Node;
+
+import edu.kit.aifb.belt.db.Action;
+import edu.kit.aifb.belt.db.State;
+import edu.kit.aifb.belt.db.dict.StringDictionary;
 
 public class LearnPartialChainIterator {
 	final private Logger log = LoggerFactory.getLogger( LearnPartialChainIterator.class );
@@ -64,7 +69,19 @@ public class LearnPartialChainIterator {
 		Node s = ltbExecCxt.nodeDict.getNode(t.s);
 		Node p = ltbExecCxt.nodeDict.getNode(t.p);
 		Node o = ltbExecCxt.nodeDict.getNode(t.o);
-		log.info("Match: <{}> (n{}) / <{}> (n{}) / <{}> (n{})", new Object[]{s, t.s, p, t.p, o , t.o});		
+		
+		try {
+			URL url = new URL(o.toString());
+			String domain = url.getHost();
+			
+			Action action = new Action(domain, t.p, ((StringDictionary)ltbExecCxt.nodeDict));
+					
+			log.info("Match: <{}> (n{}) / <{}> (n{}) / <{}> (n{})", new Object[]{s, t.s, p, t.p, o , t.o});		
+		} catch (MalformedURLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
 	}
 
 	public Iterator<? extends Triple> getIterator() {
