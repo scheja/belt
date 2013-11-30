@@ -364,7 +364,7 @@ public class Database implements SourceIndex, DictionaryListener {
 		return dict;
 	}
 
-	public void addQuad(Node g, Node s, Node p, Node o) {
+	public synchronized void addQuad(Node g, Node s, Node p, Node o) {
 		try {
 			getQuadStatement.setInt(1, dict.getId(s.toString()));
 			getQuadStatement.setInt(2, dict.getId(p.toString()));
@@ -401,7 +401,7 @@ public class Database implements SourceIndex, DictionaryListener {
 		}
 	}
 
-	public Iterator<Quad> findAllByURI(String uri) {
+	public synchronized Iterator<Quad> findAllByURI(String uri) {
 		Collection<Quad> result = new ArrayList<Quad>();
 
 		try {
@@ -422,7 +422,7 @@ public class Database implements SourceIndex, DictionaryListener {
 		return result.iterator();
 	}
 
-	public void updateURIs(String from, String to) {
+	public synchronized void updateURIs(String from, String to) {
 		try {
 			replaceQuadContextStatement.setInt(1, dict.getId(to));
 			replaceQuadContextStatement.setInt(2, dict.getId(from));
