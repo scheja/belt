@@ -17,7 +17,9 @@ import org.squin.engine.LinkTraversalBasedExecutionContext;
 import com.hp.hpl.jena.graph.Node;
 
 import edu.kit.aifb.belt.db.Action;
+import edu.kit.aifb.belt.db.QValue;
 import edu.kit.aifb.belt.db.State;
+import edu.kit.aifb.belt.db.StateChain;
 import edu.kit.aifb.belt.db.StateFactory;
 import edu.kit.aifb.belt.db.dict.StringDictionary;
 
@@ -76,7 +78,12 @@ public class LearnPartialChainIterator {
 			String domain = url.getHost();
 			
 			Action action = new Action(domain, t.p, ((StringDictionary)ltbExecCxt.nodeDict));
-			StateFactory fac = new StateFactory(Integer.MAX_VALUE, true);
+			StateFactory statefactory = new StateFactory(Integer.MAX_VALUE, true);
+			List<State> past1 = statefactory.createState(s.toString(), Main.getDB());
+			StateChain past = new StateChain(past1);
+			StateChain future = new StateChain();
+			QValue q = new QValue(past, action, future);
+			
 			
 			log.info("Match: <{}> (n{}) / <{}> (n{}) / <{}> (n{})", new Object[]{s, t.s, p, t.p, o , t.o});		
 		} catch (MalformedURLException e) {
