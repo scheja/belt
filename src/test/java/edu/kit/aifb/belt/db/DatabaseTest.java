@@ -22,7 +22,7 @@ public class DatabaseTest {
 
 	@BeforeClass
 	public static void setUpBeforeClass() {
-		db = new Database("janscheurenbrand.de/belt");
+		db = new Database();
 		db.connect();
 	}
 

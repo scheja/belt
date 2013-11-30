@@ -38,6 +38,7 @@ public class Database implements SourceIndex, DictionaryListener {
 	private static final int BATCH_SIZE = 100;
 
 	private String host;
+	private String database;
 	private String user;
 	private String password;
 
@@ -62,18 +63,17 @@ public class Database implements SourceIndex, DictionaryListener {
 	private long size;
 
 	/**
-	 * @param host
-	 *            Format: domain/dbname.
+	 * Gets all login info from the .password file.
 	 */
-	public Database(String host) {
-		this.host = host;
-
+	public Database() {
 		try {
 			Properties p = new Properties();
 			InputStream in = getClass().getResourceAsStream(".password");
 			p.load(in);
 			in.close();
 
+			host = p.getProperty("host");
+			database = p.getProperty("database");
 			user = p.getProperty("user");
 			password = p.getProperty("password");
 
@@ -85,8 +85,9 @@ public class Database implements SourceIndex, DictionaryListener {
 		}
 	}
 
-	public Database(String host, String user, String password) {
+	public Database(String host, String database, String user, String password) {
 		this.host = host;
+		this.database = database;
 		this.user = user;
 		this.password = password;
 	}
@@ -96,7 +97,7 @@ public class Database implements SourceIndex, DictionaryListener {
 	 * password. The new object is not connected.
 	 */
 	public Database clone() {
-		return new Database(host, user, password);
+		return new Database(host, database, user, password);
 	}
 
 	public void connect() {
@@ -107,7 +108,7 @@ public class Database implements SourceIndex, DictionaryListener {
 		try {
 			Class.forName(DRIVER);
 
-			connection = DriverManager.getConnection("jdbc:mysql://" + host + "?useUnicode=true&characterEncoding=utf-8", user, password);
+			connection = DriverManager.getConnection("jdbc:mysql://" + host + "/" + database + "?useUnicode=true&characterEncoding=utf-8", user, password);
 
 			// Create tables
 			Statement stmt = connection.createStatement();

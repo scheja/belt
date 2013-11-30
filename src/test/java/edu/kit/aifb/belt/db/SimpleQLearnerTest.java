@@ -14,7 +14,7 @@ import edu.kit.aifb.belt.learner.SimpleQLearner;
 public class SimpleQLearnerTest implements DatabaseListener {
 	@Test
 	public void testQChanges() {
-		Database db = new Database("janscheurenbrand.de/belt");
+		Database db = new Database();
 		db.connect();
 		AbstractQLearner learner = new SimpleQLearner(Long.MAX_VALUE, db, this);
 		learner.start();

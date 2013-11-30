@@ -13,7 +13,7 @@ public class DictionaryTest {
 
 	@BeforeClass
 	public static void setUpBeforeClass() {
-		db = new Database("janscheurenbrand.de/belt");
+		db = new Database();
 		db.connect();
 	}
 	
