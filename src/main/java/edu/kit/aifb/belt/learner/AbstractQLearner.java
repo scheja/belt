@@ -69,7 +69,11 @@ public abstract class AbstractQLearner implements Runnable {
 	public void updateQ(StateChain history, Action action, StateChain future, double reward, double learningRate,
 			double discountFactor) {
 		if (!stop) {
-			queue.offer(new QLearnJob(history, action, future, reward, learningRate, discountFactor));
+			try {
+				queue.put(new QLearnJob(history, action, future, reward, learningRate, discountFactor));
+			} catch (InterruptedException e) {
+				Logger.getLogger(getClass()).log(Level.FATAL, "Putting interrupted.", e);
+			}
 		}
 	}
 

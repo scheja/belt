@@ -34,14 +34,18 @@ public class State {
 
 		this.domain = dict.getId(domain);
 
-		this.type = new int[type.size()];
+		if (type == null) {
+			this.type = new int[0];
+		} else {
+			this.type = new int[type.size()];
 
-		i = 0;
-		for (String s : type) {
-			this.type[i++] = dict.getId(s);
+			i = 0;
+			for (String s : type) {
+				this.type[i++] = dict.getId(s);
+			}
+
+			Arrays.sort(this.type);
 		}
-
-		Arrays.sort(this.type);
 	}
 
 	public State(String domain, Set<String> type, StringDictionary dict, String... properties) {
