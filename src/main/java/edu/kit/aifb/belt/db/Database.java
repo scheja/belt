@@ -57,7 +57,7 @@ public class Database implements SourceIndex, DictionaryListener {
 	private PreparedStatement getQuadStatement;
 	private PreparedStatement deleteQuadStatement;
 	private PreparedStatement getQuadByContextStatement;
-	private PreparedStatement replaceQuadContextStatement;
+	// private PreparedStatement replaceQuadContextStatement;
 
 	private StringDictionary dict;
 	private int dictionaryFlushThreshold = Integer.MAX_VALUE;
@@ -141,8 +141,8 @@ public class Database implements SourceIndex, DictionaryListener {
 					.prepareStatement("DELETE FROM SourceIndexTable WHERE subject = ? AND predicate = ? AND object = ? AND context = ?");
 			getQuadByContextStatement = connection
 					.prepareStatement("SELECT subject, predicate, object, context FROM SourceIndexTable WHERE context = ?");
-			replaceQuadContextStatement = connection
-					.prepareStatement("UPDATE SourceIndexTable SET context = ? WHERE context = ?");
+			// replaceQuadContextStatement = connection
+			// .prepareStatement("UPDATE SourceIndexTable SET context = ? WHERE context = ?");
 
 			final ResultSet entries = stmt.executeQuery("SELECT id, value FROM DictionaryTable");
 
@@ -178,7 +178,7 @@ public class Database implements SourceIndex, DictionaryListener {
 		if (connection == null) {
 			return;
 		}
-		
+
 		handleRedirections();
 
 		flushDictionary();
@@ -373,19 +373,23 @@ public class Database implements SourceIndex, DictionaryListener {
 	}
 
 	public synchronized void addQuad(Node g, Node s, Node p, Node o) {
+		addQuad(dict.getId(g.toString()), dict.getId(s.toString()), dict.getId(p.toString()), dict.getId(o.toString()));
+	}
+
+	public synchronized void addQuad(int g, int s, int p, int o) {
 		try {
-			getQuadStatement.setInt(1, dict.getId(s.toString()));
-			getQuadStatement.setInt(2, dict.getId(p.toString()));
-			getQuadStatement.setInt(3, dict.getId(o.toString()));
-			getQuadStatement.setInt(4, dict.getId(g.toString()));
+			getQuadStatement.setInt(1, s);
+			getQuadStatement.setInt(2, p);
+			getQuadStatement.setInt(3, o);
+			getQuadStatement.setInt(4, g);
 
 			ResultSet result = getQuadStatement.executeQuery();
 
 			if (!result.next()) {
-				insertQuadStatement.setInt(1, dict.getId(s.toString()));
-				insertQuadStatement.setInt(2, dict.getId(p.toString()));
-				insertQuadStatement.setInt(3, dict.getId(o.toString()));
-				insertQuadStatement.setInt(4, dict.getId(g.toString()));
+				insertQuadStatement.setInt(1, s);
+				insertQuadStatement.setInt(2, p);
+				insertQuadStatement.setInt(3, o);
+				insertQuadStatement.setInt(4, g);
 
 				insertQuadStatement.execute();
 			}
@@ -431,29 +435,30 @@ public class Database implements SourceIndex, DictionaryListener {
 	}
 
 	public synchronized void addRedirect(String from, String to) {
-		while (redirections.containsKey(to)) {
-			to = redirections.get(to);
+		while (redirections.containsKey(from)) {
+			from = redirections.get(from);
 		}
 
-		redirections.put(from, to);
+		redirections.put(to, from);
 	}
 
 	public synchronized void handleRedirections() {
 		try {
-			Iterator<String> fromIter = redirections.keySet().iterator();
+			Iterator<String> toIter = redirections.keySet().iterator();
 
-			while (fromIter.hasNext()) {
-				for (int i = 0; i < BATCH_SIZE && fromIter.hasNext(); i++) {
-					String from = fromIter.next();
-					String to = redirections.get(from);
+			while (toIter.hasNext()) {
+				String to = toIter.next();
+				String from = redirections.get(to);
+				int fromId = dict.getId(from);
 
-					replaceQuadContextStatement.setInt(1, dict.getId(to));
-					replaceQuadContextStatement.setInt(2, dict.getId(from));
+				getQuadByContextStatement.setInt(1, dict.getId(to));
+				ResultSet quads = getQuadByContextStatement.executeQuery();
+
+				while (quads.next()) {
+					addQuad(fromId, quads.getInt(1), quads.getInt(2), quads.getInt(3));
 				}
-
-				replaceQuadContextStatement.executeBatch();
 			}
-			
+
 			redirections.clear();
 		} catch (SQLException e) {
 			throw new DatabaseException("Could not update URIs.", e);

@@ -112,7 +112,8 @@ public class DatabaseTest {
 		size = iteratorSize(s.findAllByURI("c"));
 		assertEquals("Wrong number of quads inserted.", 1, size);
 
-		s.updateURIs("c", "d");
+		s.addRedirect("d", "c");
+		s.handleRedirections();
 		size = iteratorSize(s.findAllByURI("d"));
 		assertEquals("Wrong number of quads found with new uri.", 1, size);
 	}
