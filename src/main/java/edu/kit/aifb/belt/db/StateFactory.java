@@ -2,6 +2,7 @@ package edu.kit.aifb.belt.db;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import com.google.common.collect.Multiset;
 
@@ -24,7 +25,7 @@ public class StateFactory extends AbstractStateFactory {
 	}
 
 	@Override
-	public List<State> createState(String domain, String type, Multiset<String> properties, StringDictionary dict) {
+	public List<State> createState(String domain, Set<String> type, Multiset<String> properties, StringDictionary dict) {
 		if (ignoreMultiProps) {
 			for (String entry : properties.elementSet()) {
 				properties.setCount(entry, 1);

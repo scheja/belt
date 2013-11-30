@@ -4,6 +4,8 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
@@ -18,9 +20,9 @@ import edu.kit.aifb.belt.db.dict.StringDictionary;
 public class State {
 	private int[] properties;
 	private int domain;
-	private int type;
+	private int[] type;
 
-	public State(String domain, String type, Collection<String> properties, StringDictionary dict) {
+	public State(String domain, Set<String> type, Collection<String> properties, StringDictionary dict) {
 		this.properties = new int[properties.size()];
 
 		int i = 0;
@@ -31,18 +33,26 @@ public class State {
 		Arrays.sort(this.properties);
 
 		this.domain = dict.getId(domain);
-		this.type = dict.getId(type);
+
+		this.type = new int[type.size()];
+
+		i = 0;
+		for (String s : type) {
+			this.type[i++] = dict.getId(s);
+		}
+
+		Arrays.sort(this.type);
 	}
 
-	public State(String domain, String type, StringDictionary dict, String... properties) {
+	public State(String domain, Set<String> type, StringDictionary dict, String... properties) {
 		this(domain, type, Arrays.asList(properties), dict);
 	}
 
-	public State(int domain, int type, int[] properties) {
+	public State(int domain, int[] type, int[] properties) {
 		this.domain = domain;
 		this.type = type;
 		this.properties = properties;
-		
+
 		Arrays.sort(this.properties);
 	}
 
@@ -52,7 +62,7 @@ public class State {
 		for (int l : properties) {
 			set.add(dict.getString(l));
 		}
-		
+
 		return set;
 	}
 
@@ -60,8 +70,14 @@ public class State {
 		return dict.getString(domain);
 	}
 
-	public String getType(StringDictionary dict) {
-		return dict.getString(type);
+	public Set<String> getType(StringDictionary dict) {
+		Set<String> result = new HashSet<String>();
+
+		for (int i : type) {
+			result.add(dict.getString(i));
+		}
+
+		return result;
 	}
 
 	/**
@@ -70,17 +86,22 @@ public class State {
 	 * @return A copy of this state without domain and type.
 	 */
 	public State getCleanCopy() {
-		return new State(0, 0, properties);
+		return new State(0, null, properties);
 	}
 
 	public void getBytes(DataOutputStream data, StringDictionary stringDict) throws IOException {
-		data.writeLong(type);
-		data.writeLong(domain);
+		data.writeInt(type.length);
+
+		for (int i : type) {
+			data.writeInt(i);
+		}
+
+		data.writeInt(domain);
 
 		data.writeInt(properties.length);
 
-		for (long l : properties) {
-			data.writeLong(l);
+		for (int i : properties) {
+			data.writeInt(i);
 		}
 	}
 }
