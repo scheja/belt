@@ -38,7 +38,7 @@ public class Main {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		db = new Database("141.52.218.9/belt");
+		db = new Database();
 		db.connect();
 		db.setDictionaryFlushThreshold(100);
 		

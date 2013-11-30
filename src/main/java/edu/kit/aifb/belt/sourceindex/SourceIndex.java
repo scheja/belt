@@ -3,12 +3,8 @@ package edu.kit.aifb.belt.sourceindex;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Stack;
-
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.sparql.core.Quad;
-
-import edu.kit.aifb.belt.sourceindex.SourceIndexJenaImpl.Redirection;
 
 /**
  * @author janscheurenbrand

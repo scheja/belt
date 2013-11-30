@@ -10,12 +10,15 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Properties;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.Priority;
+import org.openjena.atlas.iterator.Iter;
 
 import com.google.common.collect.AbstractIterator;
 import com.hp.hpl.jena.graph.Node;
@@ -27,8 +30,7 @@ import edu.kit.aifb.belt.db.dict.StringDictionary.Entry;
 import edu.kit.aifb.belt.sourceindex.SourceIndex;
 
 /**
- * Connects to the database, provides standard functionality.
- * Not thread-safe.
+ * Connects to the database, provides standard functionality. Not thread-safe.
  * 
  * @author sibbo
  */
@@ -38,6 +40,7 @@ public class Database implements SourceIndex, DictionaryListener {
 	private static final int BATCH_SIZE = 100;
 
 	private String host;
+	private String database;
 	private String user;
 	private String password;
 
@@ -58,22 +61,23 @@ public class Database implements SourceIndex, DictionaryListener {
 
 	private StringDictionary dict;
 	private int dictionaryFlushThreshold = Integer.MAX_VALUE;
-	
+
+	private Map<String, String> redirects = new HashMap<String, String>();
+
 	private long size;
 
 	/**
-	 * @param host
-	 *            Format: domain/dbname.
+	 * Gets all login info from the .password file.
 	 */
-	public Database(String host) {
-		this.host = host;
-
+	public Database() {
 		try {
 			Properties p = new Properties();
 			InputStream in = getClass().getResourceAsStream(".password");
 			p.load(in);
 			in.close();
 
+			host = p.getProperty("host");
+			database = p.getProperty("database");
 			user = p.getProperty("user");
 			password = p.getProperty("password");
 
@@ -85,8 +89,9 @@ public class Database implements SourceIndex, DictionaryListener {
 		}
 	}
 
-	public Database(String host, String user, String password) {
+	public Database(String host, String database, String user, String password) {
 		this.host = host;
+		this.database = database;
 		this.user = user;
 		this.password = password;
 	}
@@ -96,7 +101,7 @@ public class Database implements SourceIndex, DictionaryListener {
 	 * password. The new object is not connected.
 	 */
 	public Database clone() {
-		return new Database(host, user, password);
+		return new Database(host, database, user, password);
 	}
 
 	public void connect() {
@@ -107,7 +112,8 @@ public class Database implements SourceIndex, DictionaryListener {
 		try {
 			Class.forName(DRIVER);
 
-			connection = DriverManager.getConnection("jdbc:mysql://" + host + "?useUnicode=true&characterEncoding=utf-8", user, password);
+			connection = DriverManager.getConnection("jdbc:mysql://" + host + "/" + database
+					+ "?useUnicode=true&characterEncoding=utf-8", user, password);
 
 			// Create tables
 			Statement stmt = connection.createStatement();
@@ -141,7 +147,7 @@ public class Database implements SourceIndex, DictionaryListener {
 			final ResultSet entries = stmt.executeQuery("SELECT id, value FROM DictionaryTable");
 
 			dict = new StringDictionary(this);
-			
+
 			dict.load(new AbstractIterator<Entry>() {
 				@Override
 				protected Entry computeNext() {
@@ -172,6 +178,8 @@ public class Database implements SourceIndex, DictionaryListener {
 		if (connection == null) {
 			return;
 		}
+		
+		handleRedirections();
 
 		flushDictionary();
 		dict = null;
@@ -183,7 +191,7 @@ public class Database implements SourceIndex, DictionaryListener {
 			throw new DatabaseException("Could not close database connection", e);
 		}
 	}
-	
+
 	public boolean isConnected(int timeout) {
 		if (connection == null) {
 			return false;
@@ -342,7 +350,7 @@ public class Database implements SourceIndex, DictionaryListener {
 			throw new DatabaseException("Error while fetching best q value.", e);
 		}
 	}
-	
+
 	public void clearQTable() {
 		try {
 			clearQStatement.execute();
@@ -422,24 +430,42 @@ public class Database implements SourceIndex, DictionaryListener {
 		return result.iterator();
 	}
 
-	public synchronized void updateURIs(String from, String to) {
-		try {
-			replaceQuadContextStatement.setInt(1, dict.getId(to));
-			replaceQuadContextStatement.setInt(2, dict.getId(from));
+	public synchronized void addRedirect(String from, String to) {
+		while (redirections.containsKey(to)) {
+			to = redirections.get(to);
+		}
 
-			replaceQuadContextStatement.execute();
+		redirections.put(from, to);
+	}
+
+	public synchronized void handleRedirections() {
+		try {
+			Iterator<String> fromIter = redirections.keySet().iterator();
+
+			while (fromIter.hasNext()) {
+				for (int i = 0; i < BATCH_SIZE && fromIter.hasNext(); i++) {
+					String from = fromIter.next();
+					String to = redirections.get(from);
+
+					replaceQuadContextStatement.setInt(1, dict.getId(to));
+					replaceQuadContextStatement.setInt(2, dict.getId(from));
+				}
+
+				replaceQuadContextStatement.executeBatch();
+			}
+			
+			redirections.clear();
 		} catch (SQLException e) {
 			throw new DatabaseException("Could not update URIs.", e);
 		}
-
 	}
-	
+
 	public void setDictionaryFlushThreshold(int dictionaryFlushThreshold) {
 		this.dictionaryFlushThreshold = dictionaryFlushThreshold;
 	}
 
 	public void dictionaryIdAdded() {
-		if (dict.getNewIdAmount() >= dictionaryFlushThreshold ) {
+		if (dict.getNewIdAmount() >= dictionaryFlushThreshold) {
 			flushDictionary();
 			Logger.getLogger(getClass()).log(Level.DEBUG, "Flushing dictionary. Size: " + dict.size());
 		}
