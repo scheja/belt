@@ -31,6 +31,7 @@ public class Main {
     static Logger l = LoggerFactory.getLogger(Main.class);
 	protected static ModMonitor modMonitor = new ModMonitor ();
 	private static Database db = null;
+	private static SimpleQLearner sql = null;
 
 	
 	/**
@@ -63,6 +64,9 @@ public class Main {
 				+ "    ?dbporg <http://dbpedia.org/property/city> ?city"
 				+ "}\n";
 		
+		sql = new SimpleQLearner(Long.MAX_VALUE, db, null);
+		sql.start();		
+		
 		learnQuery(queryString2, db.getDictionary());		
 		
 		db.close();
@@ -71,6 +75,10 @@ public class Main {
 	public static Database getDB() {
 		return db;
 	}
+	
+	public static SimpleQLearner getSQL() {
+		return sql;
+	}	
 
 
 	private static void learnQuery(String queryString,NodeDictionary dict) {

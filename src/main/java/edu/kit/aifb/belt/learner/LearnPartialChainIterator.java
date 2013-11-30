@@ -83,7 +83,8 @@ public class LearnPartialChainIterator {
 			StateChain past = new StateChain(past1);
 			StateChain future = new StateChain();
 			QValue q = new QValue(past, action, future);
-			
+			SimpleQLearner sql = Main.getSQL();
+			sql.updateQ(q, 1, 0.5, 0.5);
 			
 			log.info("Match: <{}> (n{}) / <{}> (n{}) / <{}> (n{})", new Object[]{s, t.s, p, t.p, o , t.o});		
 		} catch (MalformedURLException e) {
