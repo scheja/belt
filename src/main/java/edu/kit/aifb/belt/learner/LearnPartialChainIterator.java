@@ -81,7 +81,8 @@ public class LearnPartialChainIterator {
 			StateFactory statefactory = new StateFactory(Integer.MAX_VALUE, true);
 			List<State> past1 = statefactory.createState(s.toString(), Main.getDB());
 			StateChain past = new StateChain(past1);
-			StateChain future = new StateChain();
+			List<State> future1 = statefactory.createState(Main.getDB().getDictionary());
+			StateChain future = new StateChain(future1);
 			QValue q = new QValue(past, action, future);
 			SimpleQLearner sql = Main.getSQL();
 			sql.updateQ(q, 1, 0.5, 0.5);
