@@ -32,7 +32,7 @@ public class DatabaseTest {
 		aSet.add("a");
 		Set<String> pasfsdSet = new HashSet<String>();
 		pasfsdSet.add("pasfsd");
-		
+
 		QValue x = new QValue(new StateChain(new State("a", aSet, db.getDictionary(), "past1", "past2"), new State("a",
 				aSet, db.getDictionary(), "pastx"), new State("a", aSet, db.getDictionary(), "pasty")), new Action(
 				"abc.de", "knows", db.getDictionary()), new StateChain(new State("a", aSet, db.getDictionary(),
@@ -42,8 +42,8 @@ public class DatabaseTest {
 		QValue y = new QValue(new StateChain(new State("pafsd", pasfsdSet, db.getDictionary()), new State("a", aSet,
 				db.getDictionary(), "pastx"), new State("a", aSet, db.getDictionary(), "pasty")), new Action("abc.de",
 				"knows", db.getDictionary()), new StateChain(new State("a", aSet, db.getDictionary(), "future1",
-				"future2"), new State("a", aSet, db.getDictionary(), "futurex"), new State("a", aSet, db.getDictionary(),
-				"futurey")), 2);
+				"future2"), new State("a", aSet, db.getDictionary(), "futurex"), new State("a", aSet,
+				db.getDictionary(), "futurey")), 2);
 
 		db.updateQ(x, y);
 
@@ -63,7 +63,7 @@ public class DatabaseTest {
 		aSet.add("a");
 		Set<String> pasfsdSet = new HashSet<String>();
 		pasfsdSet.add("pasfsd");
-		
+
 		QValue x = new QValue(new StateChain(new State("a", aSet, db.getDictionary(), "past1", "past2"), new State("a",
 				aSet, db.getDictionary(), "pastx"), new State("a", aSet, db.getDictionary(), "pasty")), new Action(
 				"abc.de", "knows", db.getDictionary()), new StateChain(new State("a", aSet, db.getDictionary(),
@@ -116,6 +116,25 @@ public class DatabaseTest {
 		s.handleRedirections();
 		size = iteratorSize(s.findAllByURI("d"));
 		assertEquals("Wrong number of quads found with new uri.", 1, size);
+	}
+
+	@Test
+	public void testQuality() {
+		final double quality = Math.random() + 1;
+
+		db.setQualityMeasurement(new QualityMeasurement() {
+			public double getQuality(int id) {
+				return quality;
+			}
+		});
+		
+		Node context = Node.createURI("quality.test");
+		
+		db.deleteQuality(context);
+		db.deleteQuad(new Quad(context, Node.createURI("s"), Node.createURI("p"), Node.createURI("o")));
+		db.addQuad(context, Node.createURI("s"), Node.createURI("p"), Node.createURI("o"));
+		
+		assertEquals("The quality was not inserted correctly.", quality, db.getQuality(context), 1e-10);
 	}
 
 	private int iteratorSize(@SuppressWarnings("rawtypes") Iterator i) {
