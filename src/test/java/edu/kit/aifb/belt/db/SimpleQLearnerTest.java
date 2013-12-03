@@ -32,11 +32,11 @@ public class SimpleQLearnerTest implements DatabaseListener {
 		learner.updateQ(q, 1, 0.5, 0.5);
 
 		db.getQ(q);
-		assertNotEquals("Q Value didn't change during learning process.", 0, q.getQ());
+		assertNotEquals("Q value didn't change during learning process.", 0, q.getQ());
 		learner.stop();
 		db.close();
 	}
-
+	
 	public void databaseFull() {
 		System.out.println("Database full");
 	}

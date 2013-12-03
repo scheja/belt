@@ -135,6 +135,10 @@ public class DatabaseTest {
 		db.addQuad(context, Node.createURI("s"), Node.createURI("p"), Node.createURI("o"));
 		
 		assertEquals("The quality was not inserted correctly.", quality, db.getQuality(context), 1e-10);
+		
+		db.incrementQuality(context.toString(), 0.33);
+		
+		assertEquals("The quality was no incremented correctly.", quality + 0.33, db.getQuality(context), 1e-10);
 	}
 
 	private int iteratorSize(@SuppressWarnings("rawtypes") Iterator i) {

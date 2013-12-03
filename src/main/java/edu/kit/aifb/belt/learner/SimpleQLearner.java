@@ -51,4 +51,9 @@ public class SimpleQLearner extends AbstractQLearner {
 
 		db.updateQ(q);
 	}
+
+	@Override
+	protected void updateQualityInternal(String url) {
+		db.incrementQuality(url, 0.5);
+	}
 }
