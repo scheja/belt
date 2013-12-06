@@ -11,9 +11,12 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -59,10 +62,17 @@ public class Database implements SourceIndex, DictionaryListener {
 	private PreparedStatement getQuadByContextStatement;
 	// private PreparedStatement replaceQuadContextStatement;
 
+	private PreparedStatement insertQualityStatement;
+	private PreparedStatement getQualityStatement;
+	private PreparedStatement deleteQualityStatement;
+	private PreparedStatement incrementQualityStatement;
+
 	private StringDictionary dict;
 	private int dictionaryFlushThreshold = Integer.MAX_VALUE;
 
 	private Map<String, String> redirections = new HashMap<String, String>();
+
+	private QualityMeasurement quality = new EquallyDistributedRandomQualityMeasurement();
 
 	private long size;
 
@@ -120,6 +130,7 @@ public class Database implements SourceIndex, DictionaryListener {
 			stmt.execute("CREATE TABLE IF NOT EXISTS QTable (id INT PRIMARY KEY AUTO_INCREMENT, history BLOB, action BLOB, future BLOB, q DOUBLE, updateCount INT, INDEX (history(254), action(254), future(254)), INDEX (history(254))) DEFAULT CHARSET=utf8");
 			stmt.execute("CREATE TABLE IF NOT EXISTS DictionaryTable (id INT PRIMARY KEY, value TEXT, INDEX (value(254))) DEFAULT CHARSET=utf8");
 			stmt.execute("CREATE TABLE IF NOT EXISTS SourceIndexTable (id INT PRIMARY KEY AUTO_INCREMENT, subject INT, predicate INT, object INT, context INT, INDEX (context)) DEFAULT CHARSET=utf8");
+			stmt.execute("CREATE TABLE IF NOT EXISTS QualityTable (id INT PRIMARY KEY, quality DOUBLE)");
 
 			insertQStatement = connection
 					.prepareStatement("INSERT INTO QTable (history, action, future, q, updateCount) VALUES (?, ?, ?, ?, ?)");
@@ -143,6 +154,12 @@ public class Database implements SourceIndex, DictionaryListener {
 					.prepareStatement("SELECT subject, predicate, object, context FROM SourceIndexTable WHERE context = ?");
 			// replaceQuadContextStatement = connection
 			// .prepareStatement("UPDATE SourceIndexTable SET context = ? WHERE context = ?");
+
+			insertQualityStatement = connection.prepareStatement("INSERT IGNORE INTO QualityTable VALUES (?, ?)");
+			getQualityStatement = connection.prepareStatement("SELECT quality FROM QualityTable WHERE id = ?");
+			deleteQualityStatement = connection.prepareStatement("DELETE FROM QualityTable WHERE id = ?");
+			incrementQualityStatement = connection
+					.prepareStatement("UPDATE QualityTable SET quality = quality + ? WHERE id = ?");
 
 			final ResultSet entries = stmt.executeQuery("SELECT id, value FROM DictionaryTable");
 
@@ -392,6 +409,8 @@ public class Database implements SourceIndex, DictionaryListener {
 				insertQuadStatement.setInt(4, g);
 
 				insertQuadStatement.execute();
+
+				insertQuality(g);
 			}
 
 			result.close();
@@ -469,10 +488,89 @@ public class Database implements SourceIndex, DictionaryListener {
 		this.dictionaryFlushThreshold = dictionaryFlushThreshold;
 	}
 
+	private void insertQuality(int id) {
+		try {
+			insertQualityStatement.setInt(1, id);
+			insertQualityStatement.setDouble(2, quality.getQuality(id));
+
+			insertQualityStatement.execute();
+		} catch (SQLException e) {
+			throw new DatabaseException("Could not insert quality.", e);
+		}
+	}
+
+	public double getQuality(int id) {
+		try {
+			getQualityStatement.setInt(1, id);
+
+			ResultSet queryResult = getQualityStatement.executeQuery();
+			double result = 0;
+
+			if (queryResult.next()) {
+				result = queryResult.getDouble(1);
+				queryResult.close();
+			} else {
+				queryResult.close();
+				throw new DatabaseException("No quality for id: " + id);
+			}
+
+			return result;
+		} catch (SQLException e) {
+			throw new DatabaseException("Could not get quality.", e);
+		}
+	}
+
+	public double getQuality(Node n) {
+		return getQuality(dict.getId(n));
+	}
+
+	public void deleteQuality(Node n) {
+		deleteQuality(dict.getId(n));
+	}
+
+	public void deleteQuality(int id) {
+		try {
+			deleteQualityStatement.setInt(1, id);
+			deleteQualityStatement.execute();
+		} catch (SQLException e) {
+			throw new DatabaseException("Could not delete quality.", e);
+		}
+	}
+
 	public void dictionaryIdAdded() {
 		if (dict.getNewIdAmount() >= dictionaryFlushThreshold) {
 			flushDictionary();
 			Logger.getLogger(getClass()).log(Level.DEBUG, "Flushing dictionary. Size: " + dict.size());
+		}
+	}
+
+	public void setQualityMeasurement(QualityMeasurement qualityMeasurement) {
+		quality = qualityMeasurement;
+	}
+
+	public void incrementQuality(String url, double increment) {
+		incrementQuality(dict.getId(url), increment);
+	}
+
+	public void incrementQuality(int id, double increment) {
+		try {
+			getQualityStatement.setInt(1, id);
+			ResultSet queryResult = getQualityStatement.executeQuery();
+
+			if (queryResult.next()) {
+				incrementQualityStatement.setDouble(1, increment);
+				incrementQualityStatement.setInt(2, id);
+				incrementQualityStatement.execute();
+			} else {
+				insertQualityStatement.setInt(1, id);
+				insertQualityStatement.setDouble(2, quality.getQuality(id) + increment);
+
+				insertQualityStatement.execute();
+			}
+
+			queryResult.close();
+		} catch (SQLException e) {
+			throw new DatabaseException("Could not increment Quality.", e);
 		}
 	}
 }

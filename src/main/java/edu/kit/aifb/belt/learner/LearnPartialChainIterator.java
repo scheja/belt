@@ -89,6 +89,7 @@ public class LearnPartialChainIterator {
 			QValue q = new QValue(past, action, future);
 			SimpleQLearner sql = Main.getSQL();
 			sql.updateQ(q, 1, 0.5, 0.5);
+			sql.updateQuality(o.toString());
 			
  			// log.info("#QueryPattern: <{}>", tp.toString());
  			// log.info("currentQueryPattern: <{}>", currentQueryPattern.toString());

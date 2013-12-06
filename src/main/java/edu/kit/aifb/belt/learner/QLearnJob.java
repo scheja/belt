@@ -3,7 +3,7 @@ package edu.kit.aifb.belt.learner;
 import edu.kit.aifb.belt.db.Action;
 import edu.kit.aifb.belt.db.StateChain;
 
-public class QLearnJob {
+public class QLearnJob extends Job {
 	private StateChain history;
 	private Action action;
 	private StateChain future;
