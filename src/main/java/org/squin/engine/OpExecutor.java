@@ -4,12 +4,15 @@
 */
 package org.squin.engine;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.squin.dataset.jenacommon.NodeDictionary;
 import org.squin.dataset.query.SolutionMapping;
+import org.squin.dataset.query.TriplePattern;
 import org.squin.dataset.query.arq.VarDictionary;
 import org.squin.dataset.query.arq.iterators.DecodeBindingsIterator;
 import org.squin.dataset.query.arq.iterators.EncodeBindingsIterator;
@@ -71,11 +74,18 @@ public class OpExecutor extends org.squin.dataset.query.arq.OpExecutor
 		
 		l.info("opBGP Pattern: "+ opBGP.getPattern().toString());		
 		l.info("QueryIterator: "+ input.toString());
+		
 
 		Iterator<SolutionMapping> qIt = new EncodeBindingsIterator( input, ltbExecCxt );
+		
+		List<TriplePattern> tpL = new ArrayList<TriplePattern>();
 		for ( Triple t : opBGP.getPattern().getList() ) {
- 			l.info("Created TPQI for Triple: <{}>", t.toString());			
- 			qIt = new NaiveTriplePatternQueryIter( encode(t,varDict,nodeDict), qIt, ltbExecCxt );
+ 			l.info("Created TP for Triple: <{}>", t.toString());			
+			tpL.add(encode(t,varDict,nodeDict));
+		}
+		
+		for ( TriplePattern tp : tpL ) {
+ 			qIt = new NaiveTriplePatternQueryIter( tp, qIt, ltbExecCxt, tpL );
 // 			qIt = new PrefetchingTriplePatternQueryIter( encode(t,varDict,nodeDict), qIt, ltbExecCxt );
 //			qIt = new PostponingTriplePatternQueryIter( encode(t,varDict,nodeDict), qIt, ltbExecCxt );
 		}

@@ -28,14 +28,17 @@ public class LearnPartialChainIterator {
 	private List<Triple> al;
 	private LinkTraversalBasedExecutionContext ltbExecCxt;
 	private SolutionMapping currentInputMapping;
-	private TriplePattern currentQueryPattern;
+	private TriplePattern currentQueryPattern;	
+	private List<TriplePattern> originalList;
+	private TriplePattern tp;
 
-
-	public LearnPartialChainIterator(Iterator<? extends Triple> currentMatches, LinkTraversalBasedExecutionContext ltbExecCxt, SolutionMapping currentInputMapping, TriplePattern currentQueryPattern) {
+	public LearnPartialChainIterator(Iterator<? extends Triple> currentMatches, LinkTraversalBasedExecutionContext ltbExecCxt, SolutionMapping currentInputMapping, TriplePattern currentQueryPattern, TriplePattern tp, List<TriplePattern> originalList) {
 		al = new ArrayList<Triple>();
 		this.ltbExecCxt = ltbExecCxt;
 		this.currentInputMapping = currentInputMapping;
 		this.currentQueryPattern = currentQueryPattern;
+		this.originalList = originalList;
+		this.tp = tp;
 		int[] map = ((FixedSizeSolutionMappingImpl)currentInputMapping).getMap();
 		int size = map.length;
 		String solutionMappingString = "Current Solution Mapping: ";
@@ -86,6 +89,29 @@ public class LearnPartialChainIterator {
 			QValue q = new QValue(past, action, future);
 			SimpleQLearner sql = Main.getSQL();
 			sql.updateQ(q, 1, 0.5, 0.5);
+			
+ 			// log.info("#QueryPattern: <{}>", tp.toString());
+ 			// log.info("currentQueryPattern: <{}>", currentQueryPattern.toString());
+ 			// log.info("Vars from the current Query Pattern:");
+ 			// for ( Integer i : currentQueryPattern.getVars() ) {
+	 		// 	log.info("<{}>", i.toString());
+			// } 	
+						
+ 			List<TriplePattern> whatweknow = new ArrayList<TriplePattern>();
+ 			
+ 			for (int varID : currentQueryPattern.getVars()) {
+ 				for ( TriplePattern tp1 : originalList ) {
+ 					if (tp1.containsVar(varID) && !tp1.equals(tp)) 
+ 						whatweknow.add(tp1);	
+ 				} 				
+ 			}
+			
+ 			log.info("What we know about the future");
+			for ( TriplePattern tp1 : whatweknow ) {
+	 			log.info("<{}>", tp1.toString());
+			} 	
+			
+
 			
 			log.info("Match: <{}> (n{}) / <{}> (n{}) / <{}> (n{})", new Object[]{s, t.s, p, t.p, o , t.o});		
 		} catch (MalformedURLException e) {

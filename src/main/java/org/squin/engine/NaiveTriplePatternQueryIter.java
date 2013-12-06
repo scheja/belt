@@ -6,6 +6,7 @@ package org.squin.engine;
 
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import java.util.NoSuchElementException;
 
 import org.slf4j.Logger;
@@ -49,14 +50,18 @@ public class NaiveTriplePatternQueryIter extends TriplePatternQueryIter
 	final protected LinkTraversalBasedExecutionContext ltbExecCxt;
 
 	private Boolean closed = false;
+	
+	private List<TriplePattern> originalList;
 
 
 	// initialization
 
-	public NaiveTriplePatternQueryIter ( TriplePattern tp, Iterator<SolutionMapping> input, LinkTraversalBasedExecutionContext execCxt )
+	public NaiveTriplePatternQueryIter ( TriplePattern tp, Iterator<SolutionMapping> input, LinkTraversalBasedExecutionContext execCxt, List<TriplePattern> list )
 	{
 		super( tp, input, execCxt );
 		ltbExecCxt = execCxt;
+		this.originalList = list;
+		
 	}
 
 
@@ -100,7 +105,7 @@ public class NaiveTriplePatternQueryIter extends TriplePatternQueryIter
 				                                          (currentQueryPattern.pIsVar) ? Triple.UNKNOWN_IDENTIFIER : currentQueryPattern.p,
 				                                          (currentQueryPattern.oIsVar) ? Triple.UNKNOWN_IDENTIFIER : currentQueryPattern.o );
 				
-				currentMatches = new LearnPartialChainIterator(currentMatches, ltbExecCxt, currentInputMapping, currentQueryPattern).getIterator();
+				currentMatches = new LearnPartialChainIterator(currentMatches, ltbExecCxt, currentInputMapping, currentQueryPattern, tp, originalList).getIterator();
 				
 			}
 		}

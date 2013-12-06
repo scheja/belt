@@ -4,6 +4,9 @@
 */
 package org.squin.dataset.query;
 
+import java.util.ArrayList;
+import java.util.List;
+
 
 /**
  * Represents a triple pattern by identifiers for the RDF nodes as used by
@@ -46,6 +49,17 @@ public class TriplePattern
 		this.oIsVar = oIsVar;
 		this.o = o;
 	}
+	
+	public List<Integer> getVars() {
+		List<Integer> al = new ArrayList<Integer>();
+		if (this.sIsVar)
+			al.add(this.s);		
+		if (this.pIsVar)
+			al.add(this.p);		
+		if (this.oIsVar)
+			al.add(this.o);		
+		return al;
+	}
 
 
 	// redefinition of Object methods
@@ -54,6 +68,10 @@ public class TriplePattern
 	public String toString ()
 	{
 		return "TriplePattern(" + (sIsVar?"v":"n") + String.valueOf(s) + "," + (pIsVar?"v":"n") + String.valueOf(p) + "," + (oIsVar?"v":"n") + String.valueOf(o) + ")";
+	}
+
+	public boolean containsVar(int varID) {
+		return ((this.sIsVar && this.s == varID) || (this.pIsVar && this.p == varID) || (this.oIsVar && this.o == varID));
 	}
 
 }
