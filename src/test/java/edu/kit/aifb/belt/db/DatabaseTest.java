@@ -171,11 +171,6 @@ public class DatabaseTest {
 		for (Iterator<QValue> i = db.listQs(); i.hasNext();) {
 			 QValue q = i.next();
 			 
-			 System.out.println(q);
-			 System.out.println(x);
-			 System.out.println(y);
-			 System.out.println();
-			 
 			 if (q.equals(x)) {
 				 xCount++;
 			 }
