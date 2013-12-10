@@ -20,7 +20,7 @@ public class StateStore {
 	 * Convention: states inside the history have negative positions, states
 	 * inside the future have positive positions.
 	 */
-	private Object2ObjectMap<SRKey, SRQValue> stateChainMap = new Object2ObjectRBTreeMap<SRKey, SRQValue>(
+	private Object2ObjectMap<SRKey, SRQValue> qValueMap = new Object2ObjectRBTreeMap<SRKey, SRQValue>(
 			new SRKeyComparator());
 	private BitmapTranslator propTranslator = new BitmapTranslator();
 	private BitmapTranslator typeTranslator = new BitmapTranslator();
@@ -38,13 +38,24 @@ public class StateStore {
 			EWAHCompressedBitmap[] typeChain = Arrays.copyOf(history[1], history[1].length + future[1].length);
 			System.arraycopy(future[0], 0, propChain, history[0].length, future[0].length);
 			System.arraycopy(future[1], 0, typeChain, history[1].length, future[1].length);
+			int futureOffset = history[0].length;
 			
-			SRQValue value = new SRQValue(propChain, typeChain, history[0].length, q.getQ());
+			SRQValue value = new SRQValue(propChain, typeChain, futureOffset, q.getQ());
+			Action action = q.getAction();
 			
-			// Insert history states
-			for (int i = 0; i < history[0].length; i++) {
-				for (int propOrType : history[i]) {
-					
+			// Insert states
+			for (int i = 0; i < propChain.length; i++) {
+				// Last history state will have number 0.
+				int number =  i - futureOffset + 1;
+				
+				for (int prop : propChain[i]) {
+					SRKey key = new SRKey(action, prop, number);
+					qValueMap.put(key, value);
+				}
+				
+				for (int type : typeChain[i]) {
+					SRKey key = new SRKey(action, type, number);
+					qValueMap.put(key, value);
 				}
 			}
 		}

@@ -7,12 +7,12 @@ public class SRKey {
 	private final long action;
 	private final long propertyAndPosition;
 
-	public SRKey(long action, int property, byte position) {
+	public SRKey(long action, int property, int position) {
 		this.action = action;
 		this.propertyAndPosition = property & 0xFFFFFFFF | (position & 0xFF) << 32;
 	}
 
-	public SRKey(Action action, int property, byte position) {
+	public SRKey(Action action, int property, int position) {
 		this.action = action.getProperty() | (((long) action.getDomain()) << 32);
 		this.propertyAndPosition = property & 0xFFFFFFFF | (position & 0xFF) << 32;
 	}
@@ -43,7 +43,7 @@ public class SRKey {
 		return (int) propertyAndPosition;
 	}
 
-	public byte getPosition() {
-		return (byte) ((propertyAndPosition >> 32) & 0xFF);
+	public int getPosition() {
+		return (int) ((propertyAndPosition >> 32) & 0xFFFFFFFF);
 	}
 }
