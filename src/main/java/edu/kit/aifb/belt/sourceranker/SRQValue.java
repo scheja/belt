@@ -25,7 +25,7 @@ public class SRQValue {
 		if (o instanceof SRQValue) {
 			SRQValue q = (SRQValue) o;
 			
-			return Arrays.equals(props, q.props) && Arrays.equals(types, q.types) && this.q == q.q && futureOffset == futureOffset;
+			return Arrays.equals(props, q.props) && Arrays.equals(types, q.types) && this.q == q.q && q.futureOffset == futureOffset;
 		} else {
 			return false;
 		}

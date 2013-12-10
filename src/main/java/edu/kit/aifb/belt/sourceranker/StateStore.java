@@ -1,18 +1,16 @@
 package edu.kit.aifb.belt.sourceranker;
 
+import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectRBTreeMap;
+
 import java.util.Arrays;
 import java.util.Iterator;
 
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 
-import it.unimi.dsi.fastutil.ints.IntRBTreeSet;
-import it.unimi.dsi.fastutil.ints.IntSet;
-import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
-import it.unimi.dsi.fastutil.objects.Object2ObjectRBTreeMap;
 import edu.kit.aifb.belt.db.Action;
 import edu.kit.aifb.belt.db.Database;
 import edu.kit.aifb.belt.db.QValue;
-import edu.kit.aifb.belt.db.State;
 import edu.kit.aifb.belt.db.StateChain;
 
 public class StateStore {
