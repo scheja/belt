@@ -18,7 +18,7 @@ import edu.kit.aifb.belt.db.StateChain;
  * @author sibbo
  */
 public abstract class AbstractQLearner implements Runnable {
-	private BlockingQueue<QLearnJob> queue = new ArrayBlockingQueue<QLearnJob>(100);
+	private BlockingQueue<Job> queue = new ArrayBlockingQueue<Job>(100);
 
 	private volatile boolean stop;
 	private volatile Thread self;
@@ -26,11 +26,20 @@ public abstract class AbstractQLearner implements Runnable {
 	public void run() {
 		while (!stop) {
 			try {
-				QLearnJob job = queue.poll(200, TimeUnit.MILLISECONDS);
+				Job job = queue.poll(200, TimeUnit.MILLISECONDS);
 
 				if (job != null) {
-					updateQInternal(job.getHistory(), job.getAction(), job.getFuture(), job.getReward(),
-							job.getLearningRate(), job.getDiscountFactor());
+					if (job instanceof QLearnJob) {
+						QLearnJob qJob = (QLearnJob) job;
+
+						updateQInternal(qJob.getHistory(), qJob.getAction(), qJob.getFuture(), qJob.getReward(),
+								qJob.getLearningRate(), qJob.getDiscountFactor());
+					} else if (job instanceof QualityUpdateJob) {
+						QualityUpdateJob quJob = (QualityUpdateJob) job;
+						updateQualityInternal(quJob.getURL());
+					} else {
+						Logger.getLogger(getClass()).log(Level.WARN, "Unknown Job type: " + job.getClass().getName());
+					}
 				}
 			} catch (InterruptedException e) {
 				Logger.getLogger(getClass()).log(Level.FATAL, "Polling interrupted.", e);
@@ -78,8 +87,16 @@ public abstract class AbstractQLearner implements Runnable {
 	}
 
 	public void updateQ(QValue q, double reward, double learningRate, double discountFactor) {
+		updateQ(q.getHistory(), q.getAction(), q.getFuture(), reward, learningRate, discountFactor);
+	}
+
+	public void updateQuality(String url) {
 		if (!stop) {
-			updateQ(q.getHistory(), q.getAction(), q.getFuture(), reward, learningRate, discountFactor);
+			try {
+				queue.put(new QualityUpdateJob(url));
+			} catch (InterruptedException e) {
+				Logger.getLogger(getClass()).log(Level.FATAL, "Putting interrupted.", e);
+			}
 		}
 	}
 
@@ -95,4 +112,6 @@ public abstract class AbstractQLearner implements Runnable {
 	 */
 	protected abstract void updateQInternal(StateChain history, Action action, StateChain future, double reward,
 			double learningRate, double discountFactor);
+
+	protected abstract void updateQualityInternal(String url);
 }

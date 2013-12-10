@@ -67,7 +67,7 @@ public class Main {
 		sql = new SimpleQLearner(Long.MAX_VALUE, db, null);
 		sql.start();		
 		
-		learnQuery(queryString1, db.getDictionary());		
+		learnQuery(queryString2, db.getDictionary());		
 		sql.stop();
 		db.close();
 	}

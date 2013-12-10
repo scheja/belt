@@ -1,14 +1,15 @@
 package edu.kit.aifb.belt.db;
 
 import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.Arrays;
 
 import edu.kit.aifb.belt.db.dict.StringDictionary;
 
 public class Action {
-	private static final String SEPARATOR = "§";
-
 	private int domain;
 	private int property;
 
@@ -23,11 +24,23 @@ public class Action {
 		this.property = property_id;
 	}
 
-	public String toString() {
-		return domain + SEPARATOR + property;
+	public Action(InputStream in) {
+		DataInputStream data = new DataInputStream(in);
+		
+		try {
+			domain = data.readInt();
+			property = data.readInt();
+		} catch (IOException e) {
+			// No actual IO involved.
+			throw new RuntimeException(e);
+		}
 	}
 
-	public String getUrl(StringDictionary dict) {
+	public String toString() {
+		return domain + ", " + property;
+	}
+
+	public String getDomain(StringDictionary dict) {
 		return dict.getString(domain);
 	}
 
@@ -48,5 +61,27 @@ public class Action {
 		}
 		
 		return out.toByteArray();
+	}
+	
+	public int hashCode() {
+		return domain ^ property;
+	}
+	
+	public boolean equals(Object o) {
+		if (o instanceof Action) {
+			 Action a = (Action) o;
+			
+			return a.domain == domain && a.property == property;
+		} else {
+			return false;
+		}
+	}
+
+	public int getProperty() {
+		return property;
+	}
+	
+	public int getDomain() {
+		return domain;
 	}
 }
