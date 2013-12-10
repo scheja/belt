@@ -387,7 +387,7 @@ public class Database implements SourceIndex, DictionaryListener {
 	 * 
 	 * @return
 	 */
-	public Iterator<QValue> listQs() {
+	public Iterator<QValue> listAllQs() {
 		try {
 			final ResultSet result = listQStatement.executeQuery();
 

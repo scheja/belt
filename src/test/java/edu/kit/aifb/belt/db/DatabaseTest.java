@@ -168,7 +168,7 @@ public class DatabaseTest {
 		int yCount = 0;
 		
 		
-		for (Iterator<QValue> i = db.listQs(); i.hasNext();) {
+		for (Iterator<QValue> i = db.listAllQs(); i.hasNext();) {
 			 QValue q = i.next();
 			 
 			 if (q.equals(x)) {

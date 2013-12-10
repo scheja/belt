@@ -46,7 +46,7 @@ public class QValue {
 	}
 	
 	public int hashCode() {
-		return (history.hashCode() << 1) ^ action.hashCode() ^ (future.hashCode() >> 1) ^ ((int) Double.doubleToLongBits(q));
+		return (history.hashCode() << 1) ^ action.hashCode() ^ (future.hashCode() >> 1) ^ ((int) Double.doubleToRawLongBits(q));
 	}
 	
 	public boolean equals(Object o) {

@@ -40,7 +40,7 @@ public class Action {
 		return domain + ", " + property;
 	}
 
-	public String getUrl(StringDictionary dict) {
+	public String getDomain(StringDictionary dict) {
 		return dict.getString(domain);
 	}
 
@@ -75,5 +75,13 @@ public class Action {
 		} else {
 			return false;
 		}
+	}
+
+	public int getProperty() {
+		return property;
+	}
+	
+	public int getDomain() {
+		return domain;
 	}
 }
