@@ -44,4 +44,22 @@ public class QValue {
 	public void setQ(double q) {
 		this.q = q;
 	}
+	
+	public int hashCode() {
+		return (history.hashCode() << 1) ^ action.hashCode() ^ (future.hashCode() >> 1) ^ ((int) Double.doubleToLongBits(q));
+	}
+	
+	public boolean equals(Object o) {
+		if (o instanceof QValue) {
+			QValue q = (QValue) o;
+			
+			return q.history.equals(history) && q.action.equals(action) && q.future.equals(future) && q.q == this.q;
+		} else {
+			return false;
+		}
+	}
+	
+	public String toString() {
+		return "History: " + history + " Action: " + action + " Future: " + future + " Q: " + q;
+	}
 }

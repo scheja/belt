@@ -10,8 +10,6 @@ import java.util.Arrays;
 import edu.kit.aifb.belt.db.dict.StringDictionary;
 
 public class Action {
-	private static final String SEPARATOR = "§";
-
 	private int domain;
 	private int property;
 
@@ -39,7 +37,7 @@ public class Action {
 	}
 
 	public String toString() {
-		return domain + SEPARATOR + property;
+		return domain + ", " + property;
 	}
 
 	public String getUrl(StringDictionary dict) {

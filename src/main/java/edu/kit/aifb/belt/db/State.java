@@ -140,4 +140,14 @@ public class State {
 			return false;
 		}
 	}
+	
+	public String toString() {
+		StringBuilder str = new StringBuilder();
+		
+		str.append("Domain: ").append(domain);
+		str.append(" Type: ").append(Arrays.toString(type));
+		str.append(" Properties: ").append(Arrays.toString(properties));
+		
+		return str.toString();
+	}
 }

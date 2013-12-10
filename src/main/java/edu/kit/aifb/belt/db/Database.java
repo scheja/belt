@@ -1,5 +1,6 @@
 package edu.kit.aifb.belt.db;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Blob;
@@ -145,7 +146,7 @@ public class Database implements SourceIndex, DictionaryListener {
 					.prepareStatement("SELECT q, updateCount FROM QTable WHERE history = ? AND action = ? AND future = ?");
 			getBestActionQStatement = connection
 					.prepareStatement("SELECT q FROM QTable WHERE history = ? ORDER BY q DESC LIMIT 1");
-			listQStatement = connection.prepareStatement("SELECT * FROM QTable");
+			listQStatement = connection.prepareStatement("SELECT history, action, future, q FROM QTable");
 
 			insertDictStatement = connection.prepareStatement("INSERT IGNORE INTO DictionaryTable VALUES (?, ?)");
 
@@ -395,8 +396,11 @@ public class Database implements SourceIndex, DictionaryListener {
 				protected QValue computeNext() {
 					try {
 						if (result.next()) {
-							return new QValue(new StateChain(result.getBlob(1).getBinaryStream()), new Action(result
-									.getBlob(2).getBinaryStream()), new StateChain(result.getBlob(3).getBinaryStream()), result.getDouble(4));
+//							return new QValue(new StateChain(result.getBlob(1).getBinaryStream()), new Action(result
+//									.getBlob(2).getBinaryStream()), new StateChain(result.getBlob(3).getBinaryStream()), result.getDouble(4));
+							
+							return new QValue(new StateChain(new ByteArrayInputStream(result.getBytes(1))), new Action(result
+									.getBlob(2).getBinaryStream()), new StateChain(new ByteArrayInputStream(result.getBytes(3))), result.getDouble(4));
 						} else {
 							result.close();
 							return endOfData();

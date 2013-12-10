@@ -49,10 +49,10 @@ public class StateChain {
 		StringBuilder str = new StringBuilder();
 
 		for (State s : states) {
-			str.append(s).append(" ");
+			str.append("[").append(s).append("], ");
 		}
 
-		return str.toString();
+		return str.toString().substring(0, str.length() - 2);
 	}
 
 	public int size() {
@@ -75,5 +75,35 @@ public class StateChain {
 		}
 
 		return out.toByteArray();
+	}
+	
+	public int hashCode() {
+		int hash = 0;
+		
+		for (State s : states) {
+			hash ^= s.hashCode();
+		}
+		
+		return hash;
+	}
+	
+	public boolean equals(Object o) {
+		if (o instanceof StateChain) {
+			StateChain c = (StateChain) o;
+			
+			if (c.states.size() != states.size()) {
+				return false;
+			}
+			
+			for (int i = 0; i < c.states.size(); i++) {
+				if (!states.get(i).equals(c.states.get(i))) {
+					return false;
+				}
+			}
+			
+			return true;
+		} else {
+			return false;
+		}
 	}
 }
