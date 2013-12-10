@@ -2,6 +2,7 @@ package edu.kit.aifb.belt.db;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.sql.Blob;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -30,6 +31,8 @@ import com.hp.hpl.jena.sparql.core.Quad;
 import edu.kit.aifb.belt.db.dict.DictionaryListener;
 import edu.kit.aifb.belt.db.dict.StringDictionary;
 import edu.kit.aifb.belt.db.dict.StringDictionary.Entry;
+import edu.kit.aifb.belt.db.quality.UniformQualityMeasurement;
+import edu.kit.aifb.belt.db.quality.QualityMeasurement;
 import edu.kit.aifb.belt.sourceindex.SourceIndex;
 
 /**
@@ -53,6 +56,7 @@ public class Database implements SourceIndex, DictionaryListener {
 	private PreparedStatement clearQStatement;
 	private PreparedStatement getQStatement;
 	private PreparedStatement getBestActionQStatement;
+	private PreparedStatement listQStatement;
 
 	private PreparedStatement insertDictStatement;
 
@@ -72,7 +76,7 @@ public class Database implements SourceIndex, DictionaryListener {
 
 	private Map<String, String> redirections = new HashMap<String, String>();
 
-	private QualityMeasurement quality = new EquallyDistributedRandomQualityMeasurement();
+	private QualityMeasurement quality = new UniformQualityMeasurement();
 
 	private long size;
 
@@ -141,6 +145,7 @@ public class Database implements SourceIndex, DictionaryListener {
 					.prepareStatement("SELECT q, updateCount FROM QTable WHERE history = ? AND action = ? AND future = ?");
 			getBestActionQStatement = connection
 					.prepareStatement("SELECT q FROM QTable WHERE history = ? ORDER BY q DESC LIMIT 1");
+			listQStatement = connection.prepareStatement("SELECT * FROM QTable");
 
 			insertDictStatement = connection.prepareStatement("INSERT IGNORE INTO DictionaryTable VALUES (?, ?)");
 
@@ -255,7 +260,7 @@ public class Database implements SourceIndex, DictionaryListener {
 	}
 
 	public void updateQ(QValue q) {
-		updateQ(q.getHistory().getBytes(dict), q.getAction().getBytes(dict), q.getFuture().getBytes(dict), q.getQ());
+		updateQ(q.getHistory().getBytes(), q.getAction().getBytes(dict), q.getFuture().getBytes(), q.getQ());
 	}
 
 	public void updateQ(byte[] history, byte[] action, byte[] future, double q) {
@@ -287,9 +292,9 @@ public class Database implements SourceIndex, DictionaryListener {
 
 				insertQStatement.execute();
 
-				// Increase size: 3 equals two ids for action and one double for
-				// q.
-				size += history.length + history.length + 3 * 8;
+				// Increase size: one int for the domain, bitset for type and
+				// properties.
+				size += 4;
 			}
 
 			result.close();
@@ -299,7 +304,7 @@ public class Database implements SourceIndex, DictionaryListener {
 	}
 
 	public boolean getQ(QValue q) {
-		double newQ = getQ(q.getHistory().getBytes(dict), q.getAction().getBytes(dict), q.getFuture().getBytes(dict));
+		double newQ = getQ(q.getHistory().getBytes(), q.getAction().getBytes(dict), q.getFuture().getBytes());
 
 		if (Double.isNaN(newQ)) {
 			return false;
@@ -340,13 +345,12 @@ public class Database implements SourceIndex, DictionaryListener {
 	/**
 	 * Returns the best available q value for the given history.
 	 * 
-	 * @param history
-	 *            The history.
+	 * @param history The history.
 	 * @return The best available q value for the given history, or NaN, if no q
 	 *         value was found.
 	 */
 	public double getBestQ(StateChain history) {
-		return getBestQ(history.getBytes(dict));
+		return getBestQ(history.getBytes());
 	}
 
 	public double getBestQ(byte[] history) {
@@ -373,6 +377,45 @@ public class Database implements SourceIndex, DictionaryListener {
 			clearQStatement.execute();
 		} catch (SQLException e) {
 			throw new DatabaseException("Could not delete qtable", e);
+		}
+	}
+
+	/**
+	 * Warning: The result iterator must be completely traversed, otherwise
+	 * there will be a resource leak.
+	 * 
+	 * @return
+	 */
+	public Iterator<QValue> listQs() {
+		try {
+			final ResultSet result = listQStatement.executeQuery();
+
+			return new AbstractIterator<QValue>() {
+				@Override
+				protected QValue computeNext() {
+					try {
+						if (result.next()) {
+							return new QValue(new StateChain(result.getBlob(1).getBinaryStream()), new Action(result
+									.getBlob(2).getBinaryStream()), new StateChain(result.getBlob(3).getBinaryStream()), result.getDouble(4));
+						} else {
+							result.close();
+							return endOfData();
+						}
+					} catch (SQLException e) {
+						endOfData();
+
+						try {
+							result.close();
+						} catch (SQLException e1) {
+							throw new DatabaseException("Could not close result set.", e);
+						}
+
+						throw new DatabaseException("Could not retrieve next q.", e);
+					}
+				}
+			};
+		} catch (SQLException e) {
+			throw new DatabaseException("Could not list qs.", e);
 		}
 	}
 
@@ -522,6 +565,10 @@ public class Database implements SourceIndex, DictionaryListener {
 
 	public double getQuality(Node n) {
 		return getQuality(dict.getId(n));
+	}
+
+	public double getQuality(String uri) {
+		return getQuality(dict.getId(uri));
 	}
 
 	public void deleteQuality(Node n) {

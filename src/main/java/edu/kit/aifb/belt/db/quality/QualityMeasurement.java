@@ -1,4 +1,4 @@
-package edu.kit.aifb.belt.db;
+package edu.kit.aifb.belt.db.quality;
 
 public interface QualityMeasurement {
 	public double getQuality(int id);

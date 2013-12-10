@@ -15,6 +15,7 @@ import org.junit.Test;
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.sparql.core.Quad;
 
+import edu.kit.aifb.belt.db.quality.QualityMeasurement;
 import edu.kit.aifb.belt.sourceindex.SourceIndex;
 
 public class DatabaseTest {

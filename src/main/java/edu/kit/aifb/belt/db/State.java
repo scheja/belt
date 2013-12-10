@@ -1,5 +1,6 @@
 package edu.kit.aifb.belt.db;
 
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
@@ -57,7 +58,24 @@ public class State {
 		this.type = type;
 		this.properties = properties;
 
+		Arrays.sort(this.type);
 		Arrays.sort(this.properties);
+	}
+
+	public State(DataInputStream data) throws IOException {
+		type = new int[data.readInt()];
+
+		for (int i = 0; i < type.length; i++) {
+			type[i] = data.readInt();
+		}
+		
+		domain = data.readInt();
+		
+		properties = new int[data.readInt()];
+
+		for (int i = 0; i < properties.length; i++) {
+			properties[i] = data.readInt();
+		}
 	}
 
 	public Multiset<String> getProperties(StringDictionary dict) {
@@ -93,7 +111,7 @@ public class State {
 		return new State(0, null, properties);
 	}
 
-	public void getBytes(DataOutputStream data, StringDictionary stringDict) throws IOException {
+	public void getBytes(DataOutputStream data) throws IOException {
 		data.writeInt(type.length);
 
 		for (int i : type) {
@@ -106,6 +124,20 @@ public class State {
 
 		for (int i : properties) {
 			data.writeInt(i);
+		}
+	}
+	
+	public int hashCode() {
+		return domain ^ Arrays.hashCode(type) ^ Arrays.hashCode(properties);
+	}
+	
+	public boolean equals(Object o) {
+		if (o instanceof State) {
+			State s = (State) o;
+			
+			return s.domain == domain && Arrays.equals(s.type, type) && Arrays.equals(s.properties, properties);
+		} else {
+			return false;
 		}
 	}
 }

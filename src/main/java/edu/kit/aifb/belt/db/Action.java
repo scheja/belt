@@ -1,8 +1,11 @@
 package edu.kit.aifb.belt.db;
 
 import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.Arrays;
 
 import edu.kit.aifb.belt.db.dict.StringDictionary;
 
@@ -21,6 +24,18 @@ public class Action {
 	public Action(String domain, int property_id, StringDictionary dict) {
 		this.domain = dict.getId(domain);
 		this.property = property_id;
+	}
+
+	public Action(InputStream in) {
+		DataInputStream data = new DataInputStream(in);
+		
+		try {
+			domain = data.readInt();
+			property = data.readInt();
+		} catch (IOException e) {
+			// No actual IO involved.
+			throw new RuntimeException(e);
+		}
 	}
 
 	public String toString() {
@@ -48,5 +63,19 @@ public class Action {
 		}
 		
 		return out.toByteArray();
+	}
+	
+	public int hashCode() {
+		return domain ^ property;
+	}
+	
+	public boolean equals(Object o) {
+		if (o instanceof Action) {
+			 Action a = (Action) o;
+			
+			return a.domain == domain && a.property == property;
+		} else {
+			return false;
+		}
 	}
 }
