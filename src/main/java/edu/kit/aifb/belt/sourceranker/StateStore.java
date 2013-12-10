@@ -1,5 +1,6 @@
 package edu.kit.aifb.belt.sourceranker;
 
+import java.util.Arrays;
 import java.util.Iterator;
 
 import com.googlecode.javaewah.EWAHCompressedBitmap;
@@ -31,13 +32,17 @@ public class StateStore {
 		while (iter.hasNext()) {
 			QValue q = iter.next();
 			
-			EWAHCompressedBitmap[] history = createBitmapsFromStateChain(q.getHistory());
-			EWAHCompressedBitmap[] future = createBitmapsFromStateChain(q.getFuture());
+			EWAHCompressedBitmap[][] history = createBitmapsFromStateChain(q.getHistory());
+			EWAHCompressedBitmap[][] future = createBitmapsFromStateChain(q.getFuture());
+			EWAHCompressedBitmap[] propChain = Arrays.copyOf(history[0], history[0].length + future[0].length);
+			EWAHCompressedBitmap[] typeChain = Arrays.copyOf(history[1], history[1].length + future[1].length);
+			System.arraycopy(future[0], 0, propChain, history[0].length, future[0].length);
+			System.arraycopy(future[1], 0, typeChain, history[1].length, future[1].length);
 			
-			SRQValue value = new SRQValue(history, future, q.getQ());
+			SRQValue value = new SRQValue(propChain, typeChain, history[0].length, q.getQ());
 			
 			// Insert history states
-			for (int i = 0; i < history.length; i++) {
+			for (int i = 0; i < history[0].length; i++) {
 				for (int propOrType : history[i]) {
 					
 				}
@@ -45,23 +50,13 @@ public class StateStore {
 		}
 	}
 
-	private void addPropsAndTypes(StateChain chain, IntSet props, IntSet types) {
-		for (State s : chain.getStateList()) {
-			for (int prop : s.getProperties()) {
-				props.add(prop);
-			}
-
-			for (int type : s.getTypes()) {
-				types.add(type);
-			}
-		}
-	}
-
-	private EWAHCompressedBitmap[] createBitmapsFromStateChain(StateChain chain) {
-		EWAHCompressedBitmap[] result = new EWAHCompressedBitmap[chain.size()];
+	private EWAHCompressedBitmap[][] createBitmapsFromStateChain(StateChain chain) {
+		EWAHCompressedBitmap[][] result = new EWAHCompressedBitmap[2][chain.size()];
 
 		for (int i = 0; i < result.length; i++) {
-			result[i] = bitmapFactory.getBitmap(chain.getStateList().get(i));
+			EWAHCompressedBitmap[] tmp = bitmapFactory.getBitmaps(chain.getStateList().get(i));
+			result[0][i] = tmp[0];
+			result[1][i] = tmp[1];
 		}
 
 		return result;
