@@ -34,7 +34,7 @@ public class StateStore {
 			EWAHCompressedBitmap[] history = createBitmapsFromStateChain(q.getHistory());
 			EWAHCompressedBitmap[] future = createBitmapsFromStateChain(q.getFuture());
 			
-			//SRQValue value = new SRQValue(history, future, q.getQ());
+			SRQValue value = new SRQValue(history, future, q.getQ());
 			
 			// Insert history states
 			for (int i = 0; i < history.length; i++) {
@@ -43,39 +43,6 @@ public class StateStore {
 				}
 			}
 		}
-	}
-
-	/**
-	 * Traverses db to get all props and types and set up the maps for the bitset.
-	 * @param db
-	 */
-	private void loadPropsAndTypes(Database db) {
-		Iterator<QValue> iter = db.listAllQs();
-		IntSet props = new IntRBTreeSet();
-		IntSet types = new IntRBTreeSet();
-
-		// Get all props and types
-		while (iter.hasNext()) {
-			QValue q = iter.next();
-
-			addPropsAndTypes(q.getHistory(), props, types);
-			addPropsAndTypes(q.getFuture(), props, types);
-		}
-
-		// Set up bitmap index with props and types
-		translator = new BitmapTranslator();
-
-		for (int prop : props) {
-			translator.addInt(prop);
-		}
-
-		for (int type : types) {
-			translator.addInt(type);
-		}
-
-		propCount = props.size();
-		typeCount = types.size();
-		bitmapFactory = new BitmapFactory(translator);
 	}
 
 	private void addPropsAndTypes(StateChain chain, IntSet props, IntSet types) {
