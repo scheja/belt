@@ -27,7 +27,7 @@ public class Action {
 		return domain + SEPARATOR + property;
 	}
 
-	public String getUrl(StringDictionary dict) {
+	public String getDomain(StringDictionary dict) {
 		return dict.getString(domain);
 	}
 
