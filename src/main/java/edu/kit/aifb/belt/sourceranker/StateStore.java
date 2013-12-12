@@ -9,6 +9,7 @@ import it.unimi.dsi.fastutil.objects.ObjectSortedSet;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -36,6 +37,7 @@ public class StateStore {
 
 	private int resultsForAveraging = 5;
 	private SimilarityCalculator similarityCalculator = new SimpleSimilarityCalculator();
+	private QCalculator qCalculator = new AverageQCalculator();
 
 	public StateStore(Database db) {
 		this.db = db;
@@ -153,7 +155,7 @@ public class StateStore {
 
 	public List<RankedDomain> rankSources(StateChain history, String actionProperty, StateChain future,
 			Collection<String> domains) {
-		ObjectSortedSet<RankedDomain> result = new ObjectRBTreeSet<RankedDomain>();
+		List<RankedDomain> result = new ArrayList<RankedDomain>();
 
 		// Combine state chains.
 		List<State> combined = new ArrayList<State>();
@@ -164,8 +166,13 @@ public class StateStore {
 		EWAHCompressedBitmap[][] bitmaps = createBitmapsFromStateChain(new StateChain(combined));
 
 		for (String domain : domains) {
-			double q = getQValue(bitmaps[0], bitmaps[1], combined, futureOffset, domain, actionProperty);
+			double q = getQValue(bitmaps[0], bitmaps[1], futureOffset, domain, actionProperty);
+			result.add(new RankedDomain(domain, q));
 		}
+		
+		Collections.sort(result);
+		
+		return result;
 	}
 
 	private double getQValue(EWAHCompressedBitmap[] props, EWAHCompressedBitmap[] types, final int futureOffset, String domain, String actionProperty) {
@@ -208,6 +215,12 @@ public class StateStore {
 
 		for (SRResultValue value : candidates) {
 			value.setSimilarity(similarityCalculator.calculateSimilarity(props, types, futureOffset, value.getProps(), value.getTypes(), value.getFutureOffset()));
+			results.add(value);
 		}
+		
+		Collections.sort(results, new SRResultValueSimilarityComparator());
+		List<SRResultValue> calculationMembers = results.subList(0, resultsForAveraging);
+		
+		return qCalculator.calculateQ(calculationMembers);
 	}
 }

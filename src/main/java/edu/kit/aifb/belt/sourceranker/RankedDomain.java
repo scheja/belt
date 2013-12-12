@@ -9,13 +9,14 @@ public class RankedDomain implements Comparable<RankedDomain> {
 		this.rank = rank;
 	}
 	
+	// Reverse sort order.
 	public int compareTo(RankedDomain o) {
 		if (rank < o.rank) {
-			return -1;
+			return 1;
 		} else if (rank == o.rank) {
 			return 0;
 		} else {
-			return 1;
+			return -1;
 		}
 	}
 
