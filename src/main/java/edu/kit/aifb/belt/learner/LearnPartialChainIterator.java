@@ -14,6 +14,8 @@ import org.squin.dataset.query.TriplePattern;
 import org.squin.dataset.query.impl.FixedSizeSolutionMappingImpl;
 import org.squin.engine.LinkTraversalBasedExecutionContext;
 
+import com.google.common.collect.HashMultiset;
+import com.google.common.collect.Multiset;
 import com.hp.hpl.jena.graph.Node;
 
 import edu.kit.aifb.belt.db.Action;
@@ -82,14 +84,10 @@ public class LearnPartialChainIterator {
 			
 			Action action = new Action(domain, t.p, ((StringDictionary)ltbExecCxt.nodeDict));
 			StateFactory statefactory = new StateFactory(Integer.MAX_VALUE, true);
-			List<State> past1 = statefactory.createState(s.toString(), Main.getDB());
-			StateChain past = new StateChain(past1);
-			List<State> future1 = statefactory.createState(Main.getDB().getDictionary());
-			StateChain future = new StateChain(future1);
-			QValue q = new QValue(past, action, future);
-			SimpleQLearner sql = Main.getSQL();
-			sql.updateQ(q, 1, 0.5, 0.5);
-			sql.updateQuality(o.toString());
+			List<State> past1list = statefactory.createState(s.toString(), Main.getDB());
+			StateChain past = new StateChain(past1list);
+			State past1 = past1list.get(0);
+
 			
  			// log.info("#QueryPattern: <{}>", tp.toString());
  			// log.info("currentQueryPattern: <{}>", currentQueryPattern.toString());
@@ -107,12 +105,26 @@ public class LearnPartialChainIterator {
  				} 				
  			}
 			
- 			log.info("What we know about the future");
+			log.info("Updated Q for:");
+			log.info("History 1 for URL: {}", s.toString());
+			log.info("Domain: {}, No. of Types: {}, No. of Props: {}", new Object[]{past1.getDomain(Main.getDB().getDictionary()), past1.getType(Main.getDB().getDictionary()).size(), past1.getProperties(Main.getDB().getDictionary()).size()});
+			log.info("Action for URL: {}", o.toString());
+			log.info("Domain: {}, Property: {}", action.getDomain(Main.getDB().getDictionary()), action.getProperty(Main.getDB().getDictionary()));
+			log.info("Future 1 with properties:");
+			Multiset<String> future1properties = HashMultiset.create();
+
 			for ( TriplePattern tp1 : whatweknow ) {
 	 			log.info("<{}>", tp1.toString());
+	 			future1properties.add(ltbExecCxt.nodeDict.getNode(tp1.p).toString());
 			} 	
 			
-
+			
+			List<State> future1 = statefactory.createState(null, null, future1properties,  Main.getDB().getDictionary());
+			StateChain future = new StateChain(future1);
+			QValue q = new QValue(past, action, future);
+			SimpleQLearner sql = Main.getSQL();
+			sql.updateQ(q, 1, 0.5, 0.5);
+			sql.updateQuality(o.toString());
 			
 			log.info("Match: <{}> (n{}) / <{}> (n{}) / <{}> (n{})", new Object[]{s, t.s, p, t.p, o , t.o});		
 		} catch (MalformedURLException e) {
