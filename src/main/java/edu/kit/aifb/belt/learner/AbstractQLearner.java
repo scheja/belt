@@ -22,6 +22,7 @@ public abstract class AbstractQLearner implements Runnable {
 
 	private volatile boolean stop;
 	private volatile Thread self;
+	private Object stopLock = new Object();
 
 	public void run() {
 		while (!stop) {
@@ -46,6 +47,10 @@ public abstract class AbstractQLearner implements Runnable {
 			}
 		}
 
+		synchronized (stopLock) {
+			stopLock.notifyAll();
+		}
+		
 		self = null;
 	}
 
@@ -60,8 +65,19 @@ public abstract class AbstractQLearner implements Runnable {
 		self.start();
 	}
 
+	/**
+	 * Stops the Q-learning thread. Blocks until the thread terminates.
+	 */
 	public void stop() {
 		stop = true;
+		
+		synchronized (stopLock) {
+			try {
+				stopLock.wait();
+			} catch (InterruptedException e) {
+				Logger.getLogger(getClass()).error("Waiting interrupted!", e);
+			}
+		}
 	}
 
 	/**

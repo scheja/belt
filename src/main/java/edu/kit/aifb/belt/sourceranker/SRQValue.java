@@ -30,4 +30,20 @@ public class SRQValue {
 			return false;
 		}
 	}
+
+	public EWAHCompressedBitmap[] getProps() {
+		return props;
+	}
+
+	public EWAHCompressedBitmap[] getTypes() {
+		return types;
+	}
+
+	public double getQ() {
+		return q;
+	}
+
+	public int getFutureOffset() {
+		return futureOffset;
+	}
 }

@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 import com.google.common.collect.HashMultiset;
@@ -23,7 +24,9 @@ public class State {
 	private int domain;
 	private int[] types;
 
-	public State(String domain, Set<String> type, Collection<String> properties, StringDictionary dict) {
+	public State(String domain, Set<String> types, Collection<String> properties, StringDictionary dict) {
+		Objects.requireNonNull(dict, "Dictionary must not be null");
+		
 		this.properties = new int[properties.size()];
 
 		int i = 0;
@@ -35,13 +38,13 @@ public class State {
 
 		this.domain = dict.getId(domain);
 
-		if (type == null) {
+		if (types == null) {
 			this.types = new int[0];
 		} else {
-			this.types = new int[type.size()];
+			this.types = new int[types.size()];
 
 			i = 0;
-			for (String s : type) {
+			for (String s : types) {
 				this.types[i++] = dict.getId(s);
 			}
 
@@ -49,13 +52,13 @@ public class State {
 		}
 	}
 
-	public State(String domain, Set<String> type, StringDictionary dict, String... properties) {
-		this(domain, type, Arrays.asList(properties), dict);
+	public State(String domain, Set<String> types, StringDictionary dict, String... properties) {
+		this(domain, types, Arrays.asList(properties), dict);
 	}
 
-	public State(int domain, int[] type, int[] properties) {
+	public State(int domain, int[] types, int[] properties) {
 		this.domain = domain;
-		this.types = type;
+		this.types = types;
 		this.properties = properties;
 
 		Arrays.sort(this.types);

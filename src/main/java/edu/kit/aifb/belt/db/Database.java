@@ -433,6 +433,10 @@ public class Database implements SourceIndex, DictionaryListener {
 	}
 
 	public StringDictionary getDictionary() {
+		if (connection == null) {
+			throw new IllegalStateException("Database is not connected.");
+		}
+		
 		return dict;
 	}
 
