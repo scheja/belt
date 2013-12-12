@@ -440,6 +440,10 @@ public class Database implements SourceIndex, DictionaryListener {
 		return dict;
 	}
 
+	public synchronized void addQuad(Quad q) {
+		addQuad(q.getGraph(), q.getSubject(), q.getPredicate(), q.getObject());
+	}
+	
 	public synchronized void addQuad(Node g, Node s, Node p, Node o) {
 		addQuad(dict.getId(g.toString()), dict.getId(s.toString()), dict.getId(p.toString()), dict.getId(o.toString()));
 	}

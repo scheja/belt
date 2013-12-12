@@ -7,6 +7,9 @@ import java.util.Set;
 
 import org.junit.Test;
 
+import com.hp.hpl.jena.graph.Node;
+import com.hp.hpl.jena.sparql.core.Quad;
+
 import edu.kit.aifb.belt.learner.AbstractQLearner;
 import edu.kit.aifb.belt.learner.DatabaseListener;
 import edu.kit.aifb.belt.learner.SimpleQLearner;
@@ -29,14 +32,17 @@ public class SimpleQLearnerTest implements DatabaseListener {
 		// Set q to zero.
 		db.updateQ(q);
 
-		learner.updateQ(q, 1, 0.5, 0.5);
+		Quad source = new Quad(Node.createURI("c"), Node.createURI("s"), Node.createURI("p"), Node.createURI("o"));
+		db.addQuad(source);
+
+		learner.updateQ(source.getGraph().toString(), q, 0.5, 0.5);
 
 		db.getQ(q);
 		assertNotEquals("Q value didn't change during learning process.", 0, q.getQ());
 		learner.stop();
 		db.close();
 	}
-	
+
 	public void databaseFull() {
 		System.out.println("Database full");
 	}
