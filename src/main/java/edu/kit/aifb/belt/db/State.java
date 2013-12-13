@@ -1,5 +1,6 @@
 package edu.kit.aifb.belt.db;
 
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
@@ -20,7 +21,7 @@ import edu.kit.aifb.belt.db.dict.StringDictionary;
 public class State {
 	private int[] properties;
 	private int domain;
-	private int[] type;
+	private int[] types;
 
 	public State(String domain, Set<String> type, Collection<String> properties, StringDictionary dict) {
 		this.properties = new int[properties.size()];
@@ -35,16 +36,16 @@ public class State {
 		this.domain = dict.getId(domain);
 
 		if (type == null) {
-			this.type = new int[0];
+			this.types = new int[0];
 		} else {
-			this.type = new int[type.size()];
+			this.types = new int[type.size()];
 
 			i = 0;
 			for (String s : type) {
-				this.type[i++] = dict.getId(s);
+				this.types[i++] = dict.getId(s);
 			}
 
-			Arrays.sort(this.type);
+			Arrays.sort(this.types);
 		}
 	}
 
@@ -54,10 +55,27 @@ public class State {
 
 	public State(int domain, int[] type, int[] properties) {
 		this.domain = domain;
-		this.type = type;
+		this.types = type;
 		this.properties = properties;
 
+		Arrays.sort(this.types);
 		Arrays.sort(this.properties);
+	}
+
+	public State(DataInputStream data) throws IOException {
+		types = new int[data.readInt()];
+
+		for (int i = 0; i < types.length; i++) {
+			types[i] = data.readInt();
+		}
+
+		domain = data.readInt();
+
+		properties = new int[data.readInt()];
+
+		for (int i = 0; i < properties.length; i++) {
+			properties[i] = data.readInt();
+		}
 	}
 
 	public Multiset<String> getProperties(StringDictionary dict) {
@@ -74,10 +92,10 @@ public class State {
 		return dict.getString(domain);
 	}
 
-	public Set<String> getType(StringDictionary dict) {
+	public Set<String> getTypes(StringDictionary dict) {
 		Set<String> result = new HashSet<String>();
 
-		for (int i : type) {
+		for (int i : types) {
 			result.add(dict.getString(i));
 		}
 
@@ -93,10 +111,10 @@ public class State {
 		return new State(0, null, properties);
 	}
 
-	public void getBytes(DataOutputStream data, StringDictionary stringDict) throws IOException {
-		data.writeInt(type.length);
+	public void getBytes(DataOutputStream data) throws IOException {
+		data.writeInt(types.length);
 
-		for (int i : type) {
+		for (int i : types) {
 			data.writeInt(i);
 		}
 
@@ -107,5 +125,37 @@ public class State {
 		for (int i : properties) {
 			data.writeInt(i);
 		}
+	}
+
+	public int hashCode() {
+		return domain ^ Arrays.hashCode(types) ^ Arrays.hashCode(properties);
+	}
+
+	public boolean equals(Object o) {
+		if (o instanceof State) {
+			State s = (State) o;
+
+			return s.domain == domain && Arrays.equals(s.types, types) && Arrays.equals(s.properties, properties);
+		} else {
+			return false;
+		}
+	}
+
+	public String toString() {
+		StringBuilder str = new StringBuilder();
+
+		str.append("Domain: ").append(domain);
+		str.append(" Type: ").append(Arrays.toString(types));
+		str.append(" Properties: ").append(Arrays.toString(properties));
+
+		return str.toString();
+	}
+
+	public int[] getProperties() {
+		return properties;
+	}
+
+	public int[] getTypes() {
+		return types;
 	}
 }

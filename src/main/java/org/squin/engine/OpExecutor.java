@@ -17,11 +17,16 @@ import org.squin.dataset.query.arq.VarDictionary;
 import org.squin.dataset.query.arq.iterators.DecodeBindingsIterator;
 import org.squin.dataset.query.arq.iterators.EncodeBindingsIterator;
 
+import com.hp.hpl.jena.graph.Graph;
 import com.hp.hpl.jena.graph.Triple;
+import com.hp.hpl.jena.graph.impl.GraphBase;
 import com.hp.hpl.jena.sparql.algebra.op.OpBGP;
 import com.hp.hpl.jena.sparql.engine.ExecutionContext;
 import com.hp.hpl.jena.sparql.engine.QueryIterator;
 import com.hp.hpl.jena.sparql.engine.main.OpExecutorFactory;
+
+import edu.kit.aifb.belt.db.QueryGraph;
+import edu.kit.aifb.belt.db.QueryGraph.Node;
 
 
 /**
@@ -77,18 +82,18 @@ public class OpExecutor extends org.squin.dataset.query.arq.OpExecutor
 		
 
 		Iterator<SolutionMapping> qIt = new EncodeBindingsIterator( input, ltbExecCxt );
-		
-		List<TriplePattern> tpL = new ArrayList<TriplePattern>();
+				
+		QueryGraph queryGraph = new QueryGraph();
+
 		for ( Triple t : opBGP.getPattern().getList() ) {
- 			l.info("Created TP for Triple: <{}>", t.toString());			
-			tpL.add(encode(t,varDict,nodeDict));
-		}
-		
-		for ( TriplePattern tp : tpL ) {
- 			qIt = new NaiveTriplePatternQueryIter( tp, qIt, ltbExecCxt, tpL );
+ 			l.info("Created TP for Triple: <{}>", t.toString());
+ 			TriplePattern tp = encode(t,varDict,nodeDict);
+ 			Node node = queryGraph.add(t,tp);
+ 			qIt = new NaiveTriplePatternQueryIter(tp, qIt, ltbExecCxt, node, queryGraph);
 // 			qIt = new PrefetchingTriplePatternQueryIter( encode(t,varDict,nodeDict), qIt, ltbExecCxt );
 //			qIt = new PostponingTriplePatternQueryIter( encode(t,varDict,nodeDict), qIt, ltbExecCxt );
-		}
+
+		}		
 
 		return new DecodeBindingsIterator( qIt, ltbExecCxt );
 	}

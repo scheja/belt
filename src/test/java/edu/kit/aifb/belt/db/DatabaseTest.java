@@ -15,6 +15,7 @@ import org.junit.Test;
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.sparql.core.Quad;
 
+import edu.kit.aifb.belt.db.quality.QualityMeasurement;
 import edu.kit.aifb.belt.sourceindex.SourceIndex;
 
 public class DatabaseTest {
@@ -139,6 +140,48 @@ public class DatabaseTest {
 		db.incrementQuality(context.toString(), 0.33);
 		
 		assertEquals("The quality was no incremented correctly.", quality + 0.33, db.getQuality(context), 1e-10);
+	}
+	
+	@Test
+	public void testListQ() {
+		Set<String> aSet = new HashSet<String>();
+		aSet.add("a");
+		Set<String> pasfsdSet = new HashSet<String>();
+		pasfsdSet.add("pasfsd");
+
+		QValue x = new QValue(new StateChain(new State("a", aSet, db.getDictionary(), "past1", "past2"), new State("a",
+				aSet, db.getDictionary(), "pastx"), new State("a", aSet, db.getDictionary(), "pasty")), new Action(
+				"abc.de", "knows", db.getDictionary()), new StateChain(new State("a", aSet, db.getDictionary(),
+				"future1", "future2"), new State("a", aSet, db.getDictionary(), "futurex"), new State("a", aSet,
+				db.getDictionary(), "futurey")), 3);
+
+		QValue y = new QValue(new StateChain(new State("y", aSet, db.getDictionary(), "pafcsast2", "pasteca1"), new State("arfeca",
+				aSet, db.getDictionary(), "pastx"), new State("a", aSet, db.getDictionary(), "pasty")), new Action(
+				"abc.de", "knows", db.getDictionary()), new StateChain(new State("a", aSet, db.getDictionary(),
+				"future2", "futurfxdsae1"), new State("a", aSet, db.getDictionary(), "futurexfsda"), new State("a", aSet,
+				db.getDictionary(), "futurey")), 2);
+		
+		db.updateQ(x);
+		db.updateQ(y);
+		
+		int xCount = 0;
+		int yCount = 0;
+		
+		
+		for (Iterator<QValue> i = db.listAllQs(); i.hasNext();) {
+			 QValue q = i.next();
+			 
+			 if (q.equals(x)) {
+				 xCount++;
+			 }
+			 
+			 if (q.equals(y)) {
+				 yCount++;
+			 }
+		}
+		
+		assertEquals("Wrong amount of x found", 1, xCount);
+		assertEquals("Wrong amount of y found", 1, yCount);
 	}
 
 	private int iteratorSize(@SuppressWarnings("rawtypes") Iterator i) {

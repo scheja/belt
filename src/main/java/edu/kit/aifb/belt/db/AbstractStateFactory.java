@@ -45,12 +45,12 @@ public abstract class AbstractStateFactory {
 		while (quads.hasNext()) {
 			Quad quad = quads.next();
 
-			if (quad.getPredicate().equals("rdf:type")
-					|| quad.getPredicate().equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")) {
-				type.add(quad.getPredicate().toString());
+			if (quad.getPredicate().toString().equals("rdf:type")
+					|| quad.getPredicate().toString().equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")) {
+				type.add(quad.getObject().toString());
 			}
 		}
-
+		
 		URL u = null;
 
 		try {

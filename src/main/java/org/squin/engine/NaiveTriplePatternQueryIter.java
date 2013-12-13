@@ -23,6 +23,7 @@ import org.squin.ldcache.DataRetrievedListener;
 
 import com.hp.hpl.jena.graph.Node;
 
+import edu.kit.aifb.belt.db.QueryGraph;
 import edu.kit.aifb.belt.learner.LearnPartialChainIterator;
 
 
@@ -51,21 +52,22 @@ public class NaiveTriplePatternQueryIter extends TriplePatternQueryIter
 
 	private Boolean closed = false;
 	
-	private List<TriplePattern> originalList;
-
+	private QueryGraph queryGraph;
+	private edu.kit.aifb.belt.db.QueryGraph.Node node;
 
 	// initialization
-
-	public NaiveTriplePatternQueryIter ( TriplePattern tp, Iterator<SolutionMapping> input, LinkTraversalBasedExecutionContext execCxt, List<TriplePattern> list )
-	{
-		super( tp, input, execCxt );
-		ltbExecCxt = execCxt;
-		this.originalList = list;
+	public NaiveTriplePatternQueryIter(TriplePattern tp,
+			Iterator<SolutionMapping> input,
+			LinkTraversalBasedExecutionContext execCxt,
+			edu.kit.aifb.belt.db.QueryGraph.Node node,
+			QueryGraph queryGraph) {
 		
-	}
+		super( tp, input, execCxt );
+		this.ltbExecCxt = execCxt;
+		this.queryGraph = queryGraph;
+		this.node = node;
+		}
 
-
-	// accessors
 
 	public boolean isClosed ()
 	{
@@ -105,7 +107,7 @@ public class NaiveTriplePatternQueryIter extends TriplePatternQueryIter
 				                                          (currentQueryPattern.pIsVar) ? Triple.UNKNOWN_IDENTIFIER : currentQueryPattern.p,
 				                                          (currentQueryPattern.oIsVar) ? Triple.UNKNOWN_IDENTIFIER : currentQueryPattern.o );
 				
-				currentMatches = new LearnPartialChainIterator(currentMatches, ltbExecCxt, currentInputMapping, currentQueryPattern, tp, originalList).getIterator();
+				currentMatches = new LearnPartialChainIterator(currentMatches, ltbExecCxt, currentInputMapping, currentQueryPattern, tp, node, queryGraph).getIterator();
 				
 			}
 		}

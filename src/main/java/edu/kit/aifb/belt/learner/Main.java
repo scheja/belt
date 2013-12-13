@@ -3,6 +3,9 @@
  */
 package edu.kit.aifb.belt.learner;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.squin.command.modules.ModMonitor;
@@ -19,6 +22,10 @@ import com.hp.hpl.jena.query.QueryExecution;
 import com.hp.hpl.jena.query.QueryExecutionFactory;
 import com.hp.hpl.jena.query.ResultSet;
 import com.hp.hpl.jena.query.ResultSetFormatter;
+import com.hp.hpl.jena.sparql.core.TriplePath;
+import com.hp.hpl.jena.sparql.syntax.Element;
+import com.hp.hpl.jena.sparql.syntax.ElementGroup;
+import com.hp.hpl.jena.sparql.syntax.ElementPathBlock;
 
 import edu.kit.aifb.belt.db.Database;
 
@@ -89,8 +96,26 @@ public class Main {
 		Dataset dsARQ = new LinkedDataCacheWrappingDataset(ldcache);
 		
 		modMonitor.startTimer();
-		QueryExecution qe = QueryExecutionFactory.create(queryString, dsARQ);
+		QueryExecution qe = QueryExecutionFactory.create(queryString, dsARQ);		
 		ResultSet results = qe.execSelect();
+		
+		l.info("List of all Triples:");
+		
+		ElementGroup eg = (ElementGroup) qe.getQuery().getQueryPattern();
+		List<ElementPathBlock> epbl = new ArrayList<ElementPathBlock>();
+		for (Element e : eg.getElements()) {
+			epbl.add((ElementPathBlock) e);
+		}
+		
+		for (ElementPathBlock epb : epbl) {
+			List<TriplePath> tpl = epb.getPattern().getList();
+			
+			for (TriplePath tp : tpl) {
+				l.info(tp.toString());
+			}
+		}
+		
+	
 		System.out.println(ResultSetFormatter.asText(results));
 		long time = modMonitor.endTimer();
 		

@@ -20,6 +20,7 @@ import com.hp.hpl.jena.graph.Node;
 
 import edu.kit.aifb.belt.db.Action;
 import edu.kit.aifb.belt.db.QValue;
+import edu.kit.aifb.belt.db.QueryGraph;
 import edu.kit.aifb.belt.db.State;
 import edu.kit.aifb.belt.db.StateChain;
 import edu.kit.aifb.belt.db.StateFactory;
@@ -30,17 +31,19 @@ public class LearnPartialChainIterator {
 	private List<Triple> al;
 	private LinkTraversalBasedExecutionContext ltbExecCxt;
 	private SolutionMapping currentInputMapping;
-	private TriplePattern currentQueryPattern;	
-	private List<TriplePattern> originalList;
+	private TriplePattern currentQueryPattern;
 	private TriplePattern tp;
+	private edu.kit.aifb.belt.db.QueryGraph.Node node;
+	private QueryGraph queryGraph;
 
-	public LearnPartialChainIterator(Iterator<? extends Triple> currentMatches, LinkTraversalBasedExecutionContext ltbExecCxt, SolutionMapping currentInputMapping, TriplePattern currentQueryPattern, TriplePattern tp, List<TriplePattern> originalList) {
+	public LearnPartialChainIterator(Iterator<? extends Triple> currentMatches, LinkTraversalBasedExecutionContext ltbExecCxt, SolutionMapping currentInputMapping, TriplePattern currentQueryPattern, TriplePattern tp, edu.kit.aifb.belt.db.QueryGraph.Node node, QueryGraph queryGraph) {
 		al = new ArrayList<Triple>();
 		this.ltbExecCxt = ltbExecCxt;
 		this.currentInputMapping = currentInputMapping;
 		this.currentQueryPattern = currentQueryPattern;
-		this.originalList = originalList;
 		this.tp = tp;
+		this.node = node;
+		this.queryGraph = queryGraph;
 		int[] map = ((FixedSizeSolutionMappingImpl)currentInputMapping).getMap();
 		int size = map.length;
 		String solutionMappingString = "Current Solution Mapping: ";
@@ -62,10 +65,7 @@ public class LearnPartialChainIterator {
 				(currentQueryPattern.pIsVar?"v":"n") + String.valueOf(currentQueryPattern.p),
 				currentQueryPatternO,
 				(currentQueryPattern.oIsVar?"v":"n") + String.valueOf(currentQueryPattern.o),
-				});		
-		
-		
-		
+				});				
 		
 		while (currentMatches.hasNext()) {
 			learn(currentMatches.next());			
@@ -99,7 +99,8 @@ public class LearnPartialChainIterator {
  			List<TriplePattern> whatweknow = new ArrayList<TriplePattern>();
  			
  			for (int varID : currentQueryPattern.getVars()) {
- 				for ( TriplePattern tp1 : originalList ) {
+ 				for ( edu.kit.aifb.belt.db.QueryGraph.Node node : queryGraph.getNodes() ) {
+ 					TriplePattern tp1 = node.getTriplePattern();
  					if (tp1.containsVar(varID) && !tp1.equals(tp)) 
  						whatweknow.add(tp1);	
  				} 				
@@ -107,7 +108,7 @@ public class LearnPartialChainIterator {
 			
 			log.info("Updated Q for:");
 			log.info("History 1 for URL: {}", s.toString());
-			log.info("Domain: {}, No. of Types: {}, No. of Props: {}", new Object[]{past1.getDomain(Main.getDB().getDictionary()), past1.getType(Main.getDB().getDictionary()).size(), past1.getProperties(Main.getDB().getDictionary()).size()});
+			log.info("Domain: {}, No. of Types: {}, No. of Props: {}", new Object[]{past1.getDomain(Main.getDB().getDictionary()), past1.getTypes(Main.getDB().getDictionary()).size(), past1.getProperties(Main.getDB().getDictionary()).size()});
 			log.info("Action for URL: {}", o.toString());
 			log.info("Domain: {}, Property: {}", action.getDomain(Main.getDB().getDictionary()), action.getProperty(Main.getDB().getDictionary()));
 			log.info("Future 1 with properties:");
