@@ -11,6 +11,7 @@ import edu.kit.aifb.belt.db.Action;
 import edu.kit.aifb.belt.db.Database;
 import edu.kit.aifb.belt.db.QValue;
 import edu.kit.aifb.belt.db.StateChain;
+import edu.kit.aifb.belt.metrics.Timer;
 
 /**
  * Multithreading capable QLearner. Any number of threads can add jobs simultaneously. Jobs are executed by a single
@@ -27,17 +28,23 @@ public abstract class AbstractQLearner implements Runnable {
 	private Object stopLock = new Object();
 
 	public void run() {
+		Timer t = new Timer("learningTime");
+		t.startPaused();
+
 		while (!abort && !(stop && queue.isEmpty())) {
 			try {
 				Job job = queue.poll(200, TimeUnit.MILLISECONDS);
 
 				if (job != null) {
-
 					if (job instanceof QLearnJob) {
+						t.unpause();
+
 						QLearnJob qJob = (QLearnJob) job;
 
 						updateQInternal(qJob.getSourceURI(), qJob.getHistory(), qJob.getAction(), qJob.getFuture(),
 								qJob.getLearningRate(), qJob.getDiscountFactor(), qJob.isReward());
+
+						t.pause();
 					} else {
 						Logger.getLogger(getClass()).log(Level.WARN, "Unknown Job type: " + job.getClass().getName());
 					}
@@ -51,6 +58,7 @@ public abstract class AbstractQLearner implements Runnable {
 			stopLock.notifyAll();
 		}
 
+		t.stop();
 		self = null;
 	}
 

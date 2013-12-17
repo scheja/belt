@@ -4,12 +4,14 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectRBTreeMap;
 import it.unimi.dsi.fastutil.objects.ObjectRBTreeSet;
 import it.unimi.dsi.fastutil.objects.ObjectSet;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 
 import edu.kit.aifb.belt.db.Action;
@@ -17,12 +19,12 @@ import edu.kit.aifb.belt.db.Database;
 import edu.kit.aifb.belt.db.QValue;
 import edu.kit.aifb.belt.db.State;
 import edu.kit.aifb.belt.db.StateChain;
+import edu.kit.aifb.belt.metrics.Timer;
 
 public class SourceRanker {
 	/**
-	 * Convention: states inside the history have negative positions (The last
-	 * history state has position 0), states inside the future have positive
-	 * positions.
+	 * Convention: states inside the history have negative positions (The last history state has position 0), states
+	 * inside the future have positive positions.
 	 */
 	private final Object2ObjectMap<SRKey, SRQValue[]> qValueMap = new Object2ObjectRBTreeMap<SRKey, SRQValue[]>(
 			new SRKeyComparator());
@@ -35,8 +37,13 @@ public class SourceRanker {
 	private int resultsForAveraging = 5;
 	private SimilarityCalculator similarityCalculator = new SimpleSimilarityCalculator();
 	private QCalculator qCalculator = new AverageQCalculator();
-	
+
+	private Timer similarityTimer = new Timer("Similarity time");
+	private Timer rankingTimer = new Timer("Ranking time");
+
 	public SourceRanker(Database db) {
+		rankingTimer.startPaused();
+
 		this.db = db;
 		Iterator<QValue> iter = db.listAllQs();
 
@@ -152,6 +159,8 @@ public class SourceRanker {
 
 	public List<RankedDomain> rankSources(StateChain history, String actionProperty, StateChain future,
 			Collection<String> domains) {
+		rankingTimer.unpause();
+
 		List<RankedDomain> result = new ArrayList<RankedDomain>();
 
 		// Combine state chains.
@@ -159,20 +168,22 @@ public class SourceRanker {
 		combined.addAll(history.getStateList());
 		combined.addAll(future.getStateList());
 		final int futureOffset = history.size();
-		
+
 		EWAHCompressedBitmap[][] bitmaps = createBitmapsFromStateChain(new StateChain(combined));
 
 		for (String domain : domains) {
 			double q = getQValue(bitmaps[0], bitmaps[1], futureOffset, domain, actionProperty);
 			result.add(new RankedDomain(domain, q));
 		}
-		
+
 		Collections.sort(result);
-		
+		rankingTimer.pause();
+
 		return result;
 	}
 
-	private double getQValue(EWAHCompressedBitmap[] props, EWAHCompressedBitmap[] types, final int futureOffset, String domain, String actionProperty) {
+	private double getQValue(EWAHCompressedBitmap[] props, EWAHCompressedBitmap[] types, final int futureOffset,
+			String domain, String actionProperty) {
 		ObjectSet<SRResultValue> candidates = new ObjectRBTreeSet<SRResultValue>();
 		final Action action = new Action(domain, actionProperty, db.getDictionary());
 
@@ -208,16 +219,27 @@ public class SourceRanker {
 			}
 		}
 
+		similarityTimer.startPaused();
 		List<SRResultValue> results = new ArrayList<SRResultValue>(candidates.size());
 
 		for (SRResultValue value : candidates) {
-			value.setSimilarity(similarityCalculator.calculateSimilarity(props, types, futureOffset, value.getProps(), value.getTypes(), value.getFutureOffset()));
+			similarityTimer.unpause();
+			value.setSimilarity(similarityCalculator.calculateSimilarity(props, types, futureOffset, value.getProps(),
+					value.getTypes(), value.getFutureOffset()));
+			similarityTimer.pause();
+
 			results.add(value);
 		}
-		
+
+		similarityTimer.stop();
+
 		Collections.sort(results, new SRResultValueSimilarityComparator());
 		List<SRResultValue> calculationMembers = results.subList(0, resultsForAveraging);
-		
+
 		return qCalculator.calculateQ(calculationMembers);
+	}
+	
+	public void stopTimers() {
+		rankingTimer.stop();
 	}
 }
