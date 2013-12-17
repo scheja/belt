@@ -53,13 +53,13 @@ public class NaiveTriplePatternQueryIter extends TriplePatternQueryIter
 	private Boolean closed = false;
 	
 	private QueryGraph queryGraph;
-	private edu.kit.aifb.belt.db.QueryGraph.Node node;
+	private edu.kit.aifb.belt.db.QueryGraph.QueryNode node;
 
 	// initialization
 	public NaiveTriplePatternQueryIter(TriplePattern tp,
 			Iterator<SolutionMapping> input,
 			LinkTraversalBasedExecutionContext execCxt,
-			edu.kit.aifb.belt.db.QueryGraph.Node node,
+			edu.kit.aifb.belt.db.QueryGraph.QueryNode node,
 			QueryGraph queryGraph) {
 		
 		super( tp, input, execCxt );

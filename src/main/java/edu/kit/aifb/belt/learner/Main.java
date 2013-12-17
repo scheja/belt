@@ -63,7 +63,7 @@ public class Main {
 		
 		String queryString2 = "\n"
 				+ "PREFIX foaf: <http://xmlns.com/foaf/0.1/>\n"
-				+ "SELECT DISTINCT ?city \n"
+				+ "SELECT ?city \n"
 				+ "WHERE {\n"
 				+ "    <http://people.aifb.kit.edu/awa/foaf.rdf#andreas> foaf:knows ?friend ."
 				+ "    ?friend <http://swrc.ontoware.org/ontology#affiliation> ?org ."

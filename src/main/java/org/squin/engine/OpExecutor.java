@@ -26,7 +26,7 @@ import com.hp.hpl.jena.sparql.engine.QueryIterator;
 import com.hp.hpl.jena.sparql.engine.main.OpExecutorFactory;
 
 import edu.kit.aifb.belt.db.QueryGraph;
-import edu.kit.aifb.belt.db.QueryGraph.Node;
+import edu.kit.aifb.belt.db.QueryGraph.QueryNode;
 
 
 /**
@@ -88,7 +88,7 @@ public class OpExecutor extends org.squin.dataset.query.arq.OpExecutor
 		for ( Triple t : opBGP.getPattern().getList() ) {
  			l.info("Created TP for Triple: <{}>", t.toString());
  			TriplePattern tp = encode(t,varDict,nodeDict);
- 			Node node = queryGraph.add(t,tp);
+ 			QueryNode node = queryGraph.add(t,tp);
  			qIt = new NaiveTriplePatternQueryIter(tp, qIt, ltbExecCxt, node, queryGraph);
 // 			qIt = new PrefetchingTriplePatternQueryIter( encode(t,varDict,nodeDict), qIt, ltbExecCxt );
 //			qIt = new PostponingTriplePatternQueryIter( encode(t,varDict,nodeDict), qIt, ltbExecCxt );

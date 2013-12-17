@@ -26,7 +26,6 @@ public class FixedSizeSolutionMappingImpl implements SolutionMapping
 
 	public FixedSizeSolutionMappingImpl ( int size )
 	{
-		System.out.println("lalal");
 		map = new int[size];
 		provenance = new BindingProvenance[size];
 		for ( int i = 0; i < size; ++i ) {
@@ -41,7 +40,6 @@ public class FixedSizeSolutionMappingImpl implements SolutionMapping
 	 */
 	public FixedSizeSolutionMappingImpl ( SolutionMapping template )
 	{
-		System.out.println("lilili");
 		FixedSizeSolutionMappingImpl input = (FixedSizeSolutionMappingImpl) template;
 
 		int size = input.map.length;

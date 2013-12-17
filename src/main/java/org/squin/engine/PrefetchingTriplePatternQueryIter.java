@@ -29,7 +29,7 @@ public class PrefetchingTriplePatternQueryIter extends NaiveTriplePatternQueryIt
 
 	public PrefetchingTriplePatternQueryIter ( TriplePattern tp, Iterator<SolutionMapping> input, LinkTraversalBasedExecutionContext execCxt )
 	{
-		super( tp, input, execCxt, null );
+		super( tp, input, execCxt, null, null );
 	}
 
 
