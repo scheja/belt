@@ -629,6 +629,7 @@ public class Database implements SourceIndex, DictionaryListener {
 		}
 	}
 
+
 	public QualityMeasurement getQualityMeasurement() {
 		return quality;
 	}
