@@ -161,4 +161,8 @@ public class State {
 	public int[] getTypes() {
 		return types;
 	}
+
+	public int getDomain() {
+		return domain;
+	}
 }

@@ -57,8 +57,13 @@ public class SourceRanker {
 			System.arraycopy(future[0], 0, propChain, history[0].length, future[0].length);
 			System.arraycopy(future[1], 0, typeChain, history[1].length, future[1].length);
 			int futureOffset = history[0].length;
+			
+			int[] domainsHistory = createDomainsFromStateChain(q.getHistory());
+			int[] domainsFuture = createDomainsFromStateChain(q.getFuture());
+			int[] domainChain = Arrays.copyOf(domainsHistory, domainsHistory.length + domainsFuture.length);
+			System.arraycopy(domainsFuture, 0, domainChain, domainsHistory.length, domainsFuture.length);
 
-			SRQValue value = new SRQValue(propChain, typeChain, futureOffset, q.getQ());
+			SRQValue value = new SRQValue(propChain, typeChain, domainChain, futureOffset, q.getQ());
 			Action action = q.getAction();
 
 			// Insert states
@@ -77,6 +82,16 @@ public class SourceRanker {
 				}
 			}
 		}
+	}
+
+	private int[] createDomainsFromStateChain(StateChain chain) {
+		int[] result = new int[chain.size()];
+
+		for (int i = 0; i < chain.size(); i++) {
+			result[i] = chain.getStateList().get(i).getDomain();
+		}
+
+		return result;
 	}
 
 	public void setResultsForAveraging(int resultsForAveraging) {
@@ -170,9 +185,10 @@ public class SourceRanker {
 		final int futureOffset = history.size();
 
 		EWAHCompressedBitmap[][] bitmaps = createBitmapsFromStateChain(new StateChain(combined));
+		int[] domainChain = createDomainsFromStateChain(new StateChain(combined));
 
 		for (String domain : domains) {
-			double q = getQValue(bitmaps[0], bitmaps[1], futureOffset, domain, actionProperty);
+			double q = getQValue(bitmaps[0], bitmaps[1], domainChain, futureOffset, domain, actionProperty);
 			result.add(new RankedDomain(domain, q));
 		}
 
@@ -182,7 +198,7 @@ public class SourceRanker {
 		return result;
 	}
 
-	private double getQValue(EWAHCompressedBitmap[] props, EWAHCompressedBitmap[] types, final int futureOffset,
+	private double getQValue(EWAHCompressedBitmap[] props, EWAHCompressedBitmap[] types, int[] domains, final int futureOffset,
 			String domain, String actionProperty) {
 		ObjectSet<SRResultValue> candidates = new ObjectRBTreeSet<SRResultValue>();
 		final Action action = new Action(domain, actionProperty, db.getDictionary());
@@ -200,6 +216,10 @@ public class SourceRanker {
 				if (values != null) {
 					// Add all the results to the result set.
 					for (SRQValue value : values) {
+						if (value == null) {
+							break;
+						}
+						
 						candidates.add(new SRResultValue(key, value));
 					}
 				}
@@ -213,6 +233,10 @@ public class SourceRanker {
 				if (values != null) {
 					// Add all results to the result set.
 					for (SRQValue value : values) {
+						if (value == null) {
+							break;
+						}
+						
 						candidates.add(new SRResultValue(key, value));
 					}
 				}
@@ -224,8 +248,8 @@ public class SourceRanker {
 
 		for (SRResultValue value : candidates) {
 			similarityTimer.unpause();
-			value.setSimilarity(similarityCalculator.calculateSimilarity(props, types, futureOffset, value.getProps(),
-					value.getTypes(), value.getFutureOffset()));
+			value.setSimilarity(similarityCalculator.calculateSimilarity(props, types, futureOffset, domains, value.getProps(),
+					value.getTypes(), value.getFutureOffset(), value.getDomains()));
 			similarityTimer.pause();
 
 			results.add(value);
