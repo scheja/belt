@@ -25,6 +25,7 @@ import com.hp.hpl.jena.graph.Node;
 
 import edu.kit.aifb.belt.db.QueryGraph;
 import edu.kit.aifb.belt.learner.LearnPartialChainIterator;
+import edu.kit.aifb.belt.searcher.Main;
 
 
 /**
@@ -107,8 +108,11 @@ public class NaiveTriplePatternQueryIter extends TriplePatternQueryIter
 				                                          (currentQueryPattern.pIsVar) ? Triple.UNKNOWN_IDENTIFIER : currentQueryPattern.p,
 				                                          (currentQueryPattern.oIsVar) ? Triple.UNKNOWN_IDENTIFIER : currentQueryPattern.o );
 				
-				currentMatches = new LearnPartialChainIterator(currentMatches, ltbExecCxt, currentInputMapping, currentQueryPattern, tp, node, queryGraph).getIterator();
-				
+				if (Main.isLearning()) {
+					currentMatches = new LearnPartialChainIterator(currentMatches, ltbExecCxt, currentInputMapping, currentQueryPattern, tp, node, queryGraph).getIterator();					
+				} else {
+					log.info("We are searching for the best ");
+				}				
 			}
 		}
 
