@@ -15,4 +15,8 @@ public class NormalQualityMeasurement implements QualityMeasurement {
 	public double getQuality(int id) {
 		return r.nextGaussian() * deviation + mean;
 	}
+
+	public double getMean() {
+		return mean;
+	}
 }

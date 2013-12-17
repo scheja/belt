@@ -18,10 +18,17 @@ public class SimpleQLearner extends AbstractQLearner {
 		this.listener = listener;
 	}
 
-	protected void updateQInternal(String sourceURI, StateChain history, Action action, StateChain future,
-			double learningRate, double discountFactor) {
-		double reward = getRewardFromSourceURI(sourceURI, db);
+	protected void updateQInternal(String sourceURI, StateChain history,
+			Action action, StateChain future, double learningRate,
+			double discountFactor, boolean isReward) {
+		double reward;
 		
+		if (isReward) {
+			reward = getRewardFromSourceURI(sourceURI, db);
+		} else {
+			reward = getNegativeAverageReward(db);
+		}
+
 		if (db.getSize() > maxDbSize) {
 			if (!listenerInformed && listener != null) {
 				listenerInformed = true;
@@ -32,7 +39,8 @@ public class SimpleQLearner extends AbstractQLearner {
 		}
 
 		if (history.size() < 1 || future.size() < 1) {
-			throw new IllegalArgumentException("Cannot update Q without a start and an end state.");
+			throw new IllegalArgumentException(
+					"Cannot update Q without a start and an end state.");
 		}
 
 		QValue q = new QValue(history, action, future);
@@ -49,7 +57,8 @@ public class SimpleQLearner extends AbstractQLearner {
 			bestFutureQ = 0;
 		}
 
-		q.setQ(q.getQ() + learningRate * (reward + discountFactor * bestFutureQ - q.getQ()));
+		q.setQ(q.getQ() + learningRate
+				* (reward + discountFactor * bestFutureQ - q.getQ()));
 
 		db.updateQ(q);
 	}

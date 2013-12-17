@@ -36,6 +36,6 @@ public class SourceRankerTest {
 		
 		db.updateQ(x, y);
 		
-		StateStore ranker = new StateStore(db);
+		SourceRanker ranker = new SourceRanker(db);
 	}
 }

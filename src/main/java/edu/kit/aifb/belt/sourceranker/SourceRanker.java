@@ -12,7 +12,11 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.logging.Logger;
 
+import com.ecyrd.speed4j.StopWatch;
+import com.ecyrd.speed4j.StopWatchFactory;
+import com.ecyrd.speed4j.log.Slf4jLog;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 
 import edu.kit.aifb.belt.db.Action;
@@ -21,7 +25,7 @@ import edu.kit.aifb.belt.db.QValue;
 import edu.kit.aifb.belt.db.State;
 import edu.kit.aifb.belt.db.StateChain;
 
-public class StateStore {
+public class SourceRanker {
 	/**
 	 * Convention: states inside the history have negative positions (The last
 	 * history state has position 0), states inside the future have positive
@@ -38,8 +42,11 @@ public class StateStore {
 	private int resultsForAveraging = 5;
 	private SimilarityCalculator similarityCalculator = new SimpleSimilarityCalculator();
 	private QCalculator qCalculator = new AverageQCalculator();
+	
+	private StopWatch similarityTimer;
+	private StopWatch rankingTimer;
 
-	public StateStore(Database db) {
+	public SourceRanker(Database db) {
 		this.db = db;
 		Iterator<QValue> iter = db.listAllQs();
 

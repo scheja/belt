@@ -17,4 +17,8 @@ public class UniformQualityMeasurement implements QualityMeasurement {
 	public double getQuality(int id) {
 		return Math.random() * (end - start) + start;
 	}
+
+	public double getMean() {
+		return (end - start) / 2;
+	}
 }
