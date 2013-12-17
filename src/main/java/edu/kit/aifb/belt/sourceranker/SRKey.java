@@ -3,7 +3,8 @@ package edu.kit.aifb.belt.sourceranker;
 import edu.kit.aifb.belt.db.Action;
 
 public class SRKey {
-	// Since we use a 64-bit system, we can speed up things by using packed attributes.
+	// Since we use a 64-bit system, we can speed up things by using packed
+	// attributes.
 	private final long action;
 	private final long propertyAndPosition;
 
@@ -34,7 +35,11 @@ public class SRKey {
 	public long getAction() {
 		return action;
 	}
-	
+
+	public Action getPlainAction() {
+		return new Action((int) (action >> 32), (int) action);
+	}
+
 	public long getPropertyAndPosition() {
 		return propertyAndPosition;
 	}

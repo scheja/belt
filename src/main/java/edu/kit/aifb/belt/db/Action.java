@@ -23,6 +23,11 @@ public class Action {
 		this.domain = dict.getId(domain);
 		this.property = property_id;
 	}
+	
+	public Action(int domain, int property) {
+		this.domain = domain;
+		this.property = property;
+	}
 
 	public Action(InputStream in) {
 		DataInputStream data = new DataInputStream(in);

@@ -26,6 +26,9 @@ public class BitmapFactory {
 		
 		result = new EWAHCompressedBitmap[2];
 		
+		result[0] = new EWAHCompressedBitmap();
+		result[1] = new EWAHCompressedBitmap();
+		
 		for (int prop : s.getProperties()) {
 			result[0].set(propTranslator.getBitmap(prop));
 		}

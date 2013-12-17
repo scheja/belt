@@ -3,7 +3,6 @@ package edu.kit.aifb.belt.db;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.sql.Blob;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -27,8 +26,8 @@ import com.hp.hpl.jena.sparql.core.Quad;
 import edu.kit.aifb.belt.db.dict.DictionaryListener;
 import edu.kit.aifb.belt.db.dict.StringDictionary;
 import edu.kit.aifb.belt.db.dict.StringDictionary.Entry;
-import edu.kit.aifb.belt.db.quality.UniformQualityMeasurement;
 import edu.kit.aifb.belt.db.quality.QualityMeasurement;
+import edu.kit.aifb.belt.db.quality.UniformQualityMeasurement;
 import edu.kit.aifb.belt.sourceindex.SourceIndex;
 
 /**
@@ -428,9 +427,17 @@ public class Database implements SourceIndex, DictionaryListener {
 	}
 
 	public StringDictionary getDictionary() {
+		if (connection == null) {
+			throw new IllegalStateException("Database is not connected.");
+		}
+		
 		return dict;
 	}
 
+	public synchronized void addQuad(Quad q) {
+		addQuad(q.getGraph(), q.getSubject(), q.getPredicate(), q.getObject());
+	}
+	
 	public synchronized void addQuad(Node g, Node s, Node p, Node o) {
 		addQuad(dict.getId(g.toString()), dict.getId(s.toString()), dict.getId(p.toString()), dict.getId(o.toString()));
 	}
@@ -553,7 +560,9 @@ public class Database implements SourceIndex, DictionaryListener {
 				queryResult.close();
 			} else {
 				queryResult.close();
-				throw new DatabaseException("No quality for id: " + id);
+				insertQuality(id);
+				
+				return getQuality(id);
 			}
 
 			return result;
@@ -618,5 +627,10 @@ public class Database implements SourceIndex, DictionaryListener {
 		} catch (SQLException e) {
 			throw new DatabaseException("Could not increment Quality.", e);
 		}
+	}
+
+
+	public QualityMeasurement getQualityMeasurement() {
+		return quality;
 	}
 }

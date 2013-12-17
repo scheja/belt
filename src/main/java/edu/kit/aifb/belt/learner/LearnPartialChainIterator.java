@@ -78,7 +78,6 @@ public class LearnPartialChainIterator {
 	private void learn(Triple t, int depth) {
 		// If this isn't a boosting step, add the current Triple to the results list
 		if (depth == 0) {
-			System.out.println("WTF!?!?!?");
 			al.add(t);			
 		}
 		Node s = ltbExecCxt.nodeDict.getNode(t.s);
@@ -107,44 +106,41 @@ public class LearnPartialChainIterator {
 			StateChain future = new StateChain(future1);
 			QValue q = new QValue(past, action, future);
 			SimpleQLearner sql = Main.getSQL();
+
 			
-			try {
-				// TODO: What is the correct Value?
-				sql.updateQ(q, Main.getDB().getQuality(o), 0.5, 0.5);
-				sql.updateQuality(o.toString());
-				log.info("History 1 for URL: {}", s.toString());
-				log.info("Domain: {}, No. of Types: {}, No. of Props: {}", new Object[]{past1.getDomain(Main.getDB().getDictionary()), past1.getTypes(Main.getDB().getDictionary()).size(), past1.getProperties(Main.getDB().getDictionary()).size()});
-				log.info("Action for URL: {}", o.toString());
-				log.info("Domain: {}, Property: {}", action.getDomain(Main.getDB().getDictionary()), action.getProperty(Main.getDB().getDictionary()));
-				log.info("Future 1 with properties:");
-						
-				for (String s1 : future1properties ) {
-					log.info(s1);
-				}
-				
-				log.info("Boosting States which led us here...");
-				
-				for ( edu.kit.aifb.belt.db.QueryGraph.Edge edge1 : node.inEdges) {				
-					QueryNode n1 = edge1.from;
-					if (n1 != null) {
-						// Interate over every past Binding. At least one of them led us here...
-						for (Triple t2 : n1.getBindings()) {
-							if (t2.o == t.s) {
-								// Got i!
-								log.info("The Triple {} {} {} {} led us here.", new Object[]{ ltbExecCxt.nodeDict.getNode(t2.s), ltbExecCxt.nodeDict.getNode(t2.p), ltbExecCxt.nodeDict.getNode(t2.o), t2});
-								// boost it!
-								// fake the node traversing :)
-								QueryNode tmp = this.node;
-								this.node = n1;
-								learn(t2,depth+1);
-								this.node = tmp;
-							}
+			// TODO: What is the correct Value?
+			sql.updateQ(url.toString(), q, 0.5, 0.5);
+			log.info("History 1 for URL: {}", s.toString());
+			log.info("Domain: {}, No. of Types: {}, No. of Props: {}", new Object[]{past1.getDomain(Main.getDB().getDictionary()), past1.getTypes(Main.getDB().getDictionary()).size(), past1.getProperties(Main.getDB().getDictionary()).size()});
+			log.info("Action for URL: {}", o.toString());
+			log.info("Domain: {}, Property: {}", action.getDomain(Main.getDB().getDictionary()), action.getProperty(Main.getDB().getDictionary()));
+			log.info("Future 1 with properties:");
+					
+			for (String s1 : future1properties ) {
+				log.info(s1);
+			}
+			
+			log.info("Boosting States which led us here...");
+			
+			for ( edu.kit.aifb.belt.db.QueryGraph.Edge edge1 : node.inEdges) {				
+				QueryNode n1 = edge1.from;
+				if (n1 != null) {
+					// Interate over every past Binding. At least one of them led us here...
+					for (Triple t2 : n1.getBindings()) {
+						if (t2.o == t.s) {
+							// Got i!
+							log.info("The Triple {} {} {} {} led us here.", new Object[]{ ltbExecCxt.nodeDict.getNode(t2.s), ltbExecCxt.nodeDict.getNode(t2.p), ltbExecCxt.nodeDict.getNode(t2.o), t2});
+							// boost it!
+							// fake the node traversing :)
+							QueryNode tmp = this.node;
+							this.node = n1;
+							learn(t2,depth+1);
+							this.node = tmp;
 						}
 					}
-				}	
-			} catch (edu.kit.aifb.belt.db.DatabaseException e) {
-				e.printStackTrace();
-			}						
+				}
+			}	
+					
 		} catch (MalformedURLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

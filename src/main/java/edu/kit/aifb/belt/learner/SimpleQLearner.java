@@ -18,8 +18,10 @@ public class SimpleQLearner extends AbstractQLearner {
 		this.listener = listener;
 	}
 
-	protected void updateQInternal(StateChain history, Action action, StateChain future, double reward,
+	protected void updateQInternal(String sourceURI, StateChain history, Action action, StateChain future,
 			double learningRate, double discountFactor) {
+		double reward = getRewardFromSourceURI(sourceURI, db);
+		
 		if (db.getSize() > maxDbSize) {
 			if (!listenerInformed && listener != null) {
 				listenerInformed = true;
@@ -50,10 +52,5 @@ public class SimpleQLearner extends AbstractQLearner {
 		q.setQ(q.getQ() + learningRate * (reward + discountFactor * bestFutureQ - q.getQ()));
 
 		db.updateQ(q);
-	}
-
-	@Override
-	protected void updateQualityInternal(String url) {
-		db.incrementQuality(url, 0.5);
 	}
 }
