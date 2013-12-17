@@ -3,7 +3,6 @@ package edu.kit.aifb.belt.db;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.sql.Blob;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -13,17 +12,12 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.apache.log4j.Priority;
-import org.openjena.atlas.iterator.Iter;
 
 import com.google.common.collect.AbstractIterator;
 import com.hp.hpl.jena.graph.Node;
@@ -32,8 +26,8 @@ import com.hp.hpl.jena.sparql.core.Quad;
 import edu.kit.aifb.belt.db.dict.DictionaryListener;
 import edu.kit.aifb.belt.db.dict.StringDictionary;
 import edu.kit.aifb.belt.db.dict.StringDictionary.Entry;
-import edu.kit.aifb.belt.db.quality.UniformQualityMeasurement;
 import edu.kit.aifb.belt.db.quality.QualityMeasurement;
+import edu.kit.aifb.belt.db.quality.UniformQualityMeasurement;
 import edu.kit.aifb.belt.sourceindex.SourceIndex;
 
 /**
@@ -566,7 +560,9 @@ public class Database implements SourceIndex, DictionaryListener {
 				queryResult.close();
 			} else {
 				queryResult.close();
-				throw new DatabaseException("No quality for id: " + id);
+				insertQuality(id);
+				
+				return getQuality(id);
 			}
 
 			return result;
@@ -631,5 +627,9 @@ public class Database implements SourceIndex, DictionaryListener {
 		} catch (SQLException e) {
 			throw new DatabaseException("Could not increment Quality.", e);
 		}
+	}
+
+	public QualityMeasurement getQualityMeasurement() {
+		return quality;
 	}
 }
