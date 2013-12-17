@@ -258,7 +258,7 @@ public class SourceRanker {
 		similarityTimer.stop();
 
 		Collections.sort(results, new SRResultValueSimilarityComparator());
-		List<SRResultValue> calculationMembers = results.subList(0, resultsForAveraging);
+		List<SRResultValue> calculationMembers = results.subList(0, Math.min(resultsForAveraging, results.size()));
 
 		return qCalculator.calculateQ(calculationMembers);
 	}
