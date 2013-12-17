@@ -6,7 +6,6 @@ package org.squin.engine;
 
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.List;
 import java.util.NoSuchElementException;
 
 import org.slf4j.Logger;
@@ -26,6 +25,7 @@ import com.hp.hpl.jena.graph.Node;
 import edu.kit.aifb.belt.db.QueryGraph;
 import edu.kit.aifb.belt.learner.LearnPartialChainIterator;
 import edu.kit.aifb.belt.searcher.Main;
+import edu.kit.aifb.belt.sourceranker.RankPartialChainIterator;
 
 
 /**
@@ -111,7 +111,7 @@ public class NaiveTriplePatternQueryIter extends TriplePatternQueryIter
 				if (Main.isLearning()) {
 					currentMatches = new LearnPartialChainIterator(currentMatches, ltbExecCxt, currentInputMapping, currentQueryPattern, tp, node, queryGraph).getIterator();					
 				} else {
-					log.info("We are searching for the best ");
+					currentMatches = new RankPartialChainIterator(currentMatches, ltbExecCxt, currentInputMapping, currentQueryPattern, tp, node, queryGraph).getIterator();					
 				}				
 			}
 		}

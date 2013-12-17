@@ -31,20 +31,12 @@ public class LearnPartialChainIterator {
 	final private Logger log = LoggerFactory.getLogger( LearnPartialChainIterator.class );
 	private List<Triple> al;
 	private LinkTraversalBasedExecutionContext ltbExecCxt;
-	private SolutionMapping currentInputMapping;
-	private TriplePattern currentQueryPattern;
-	private TriplePattern tp;
 	private QueryNode node;
-	private QueryGraph queryGraph;
 
 	public LearnPartialChainIterator(Iterator<? extends Triple> currentMatches, LinkTraversalBasedExecutionContext ltbExecCxt, SolutionMapping currentInputMapping, TriplePattern currentQueryPattern, TriplePattern tp, QueryNode node, QueryGraph queryGraph) {
 		al = new ArrayList<Triple>();
 		this.ltbExecCxt = ltbExecCxt;
-		this.currentInputMapping = currentInputMapping;
-		this.currentQueryPattern = currentQueryPattern;
-		this.tp = tp;
 		this.node = node;
-		this.queryGraph = queryGraph;
 		int[] map = ((FixedSizeSolutionMappingImpl)currentInputMapping).getMap();
 		int size = map.length;
 		String solutionMappingString = "Current Solution Mapping: ";
@@ -71,15 +63,12 @@ public class LearnPartialChainIterator {
 		while (currentMatches.hasNext()) {
 			Triple t = currentMatches.next();
 			node.addBinding(t);
-			learn(t,0);			
+			learn(t,0);	
+			al.add(t);
 		}
 	}
 
 	private void learn(Triple t, int depth) {
-		// If this isn't a boosting step, add the current Triple to the results list
-		if (depth == 0) {
-			al.add(t);			
-		}
 		Node s = ltbExecCxt.nodeDict.getNode(t.s);
 		Node p = ltbExecCxt.nodeDict.getNode(t.p);
 		Node o = ltbExecCxt.nodeDict.getNode(t.o);
@@ -93,9 +82,9 @@ public class LearnPartialChainIterator {
 			
 			Action action = new Action(domain, t.p, ((StringDictionary)ltbExecCxt.nodeDict));
 			StateFactory statefactory = new StateFactory(Integer.MAX_VALUE, true);
-			List<State> past1list = statefactory.createState(s.toString(), Main.getDB());
-			StateChain past = new StateChain(past1list);
-			State past1 = past1list.get(0);
+			List<State> history1list = statefactory.createState(s.toString(), Main.getDB());
+			StateChain history = new StateChain(history1list);
+			State past1 = history1list.get(0);
 
 			Multiset<String> future1properties = HashMultiset.create();	
 			for ( edu.kit.aifb.belt.db.QueryGraph.Edge edge : node.outEdges) {				
@@ -104,7 +93,7 @@ public class LearnPartialChainIterator {
 			
 			List<State> future1 = statefactory.createState(null, null, future1properties,  Main.getDB().getDictionary());
 			StateChain future = new StateChain(future1);
-			QValue q = new QValue(past, action, future);
+			QValue q = new QValue(history, action, future);
 			SimpleQLearner sql = Main.getSQL();
 			sql.updateQ(url.toString(), q, 0.5, 0.5, true);
 
@@ -140,7 +129,6 @@ public class LearnPartialChainIterator {
 			}	
 					
 		} catch (MalformedURLException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
