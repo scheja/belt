@@ -4,19 +4,12 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectRBTreeMap;
 import it.unimi.dsi.fastutil.objects.ObjectRBTreeSet;
 import it.unimi.dsi.fastutil.objects.ObjectSet;
-import it.unimi.dsi.fastutil.objects.ObjectSortedSet;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.logging.Logger;
-
-import com.ecyrd.speed4j.StopWatch;
-import com.ecyrd.speed4j.StopWatchFactory;
-import com.ecyrd.speed4j.log.Slf4jLog;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 
 import edu.kit.aifb.belt.db.Action;
@@ -43,9 +36,6 @@ public class SourceRanker {
 	private SimilarityCalculator similarityCalculator = new SimpleSimilarityCalculator();
 	private QCalculator qCalculator = new AverageQCalculator();
 	
-	private StopWatch similarityTimer;
-	private StopWatch rankingTimer;
-
 	public SourceRanker(Database db) {
 		this.db = db;
 		Iterator<QValue> iter = db.listAllQs();

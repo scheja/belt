@@ -7,9 +7,6 @@ import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
-import com.ecyrd.speed4j.StopWatch;
-import com.ecyrd.speed4j.StopWatchFactory;
-
 import edu.kit.aifb.belt.db.Action;
 import edu.kit.aifb.belt.db.Database;
 import edu.kit.aifb.belt.db.QValue;
@@ -30,8 +27,6 @@ public abstract class AbstractQLearner implements Runnable {
 	private Object stopLock = new Object();
 
 	public void run() {
-		StopWatch sw = StopWatchFactory.getInstance("learningTime").getStopWatch();
-
 		while (!abort && !(stop && queue.isEmpty())) {
 			try {
 				Job job = queue.poll(200, TimeUnit.MILLISECONDS);
@@ -39,14 +34,10 @@ public abstract class AbstractQLearner implements Runnable {
 				if (job != null) {
 
 					if (job instanceof QLearnJob) {
-						sw.start();
-
 						QLearnJob qJob = (QLearnJob) job;
 
 						updateQInternal(qJob.getSourceURI(), qJob.getHistory(), qJob.getAction(), qJob.getFuture(),
 								qJob.getLearningRate(), qJob.getDiscountFactor(), qJob.isReward());
-
-						sw.stop();
 					} else {
 						Logger.getLogger(getClass()).log(Level.WARN, "Unknown Job type: " + job.getClass().getName());
 					}
