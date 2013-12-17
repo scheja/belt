@@ -35,11 +35,16 @@ public class SimpleQLearnerTest implements DatabaseListener {
 		Quad source = new Quad(Node.createURI("c"), Node.createURI("s"), Node.createURI("p"), Node.createURI("o"));
 		db.addQuad(source);
 
-		learner.updateQ(source.getGraph().toString(), q, 0.5, 0.5);
+		for (int i = 0; i < 4; i++) {
+			learner.updateQ(source.getGraph().toString(), q, 0.5, 0.5, true);
+		}
+
+		Thread.yield();
+		learner.stop();
 
 		db.getQ(q);
 		assertNotEquals("Q value didn't change during learning process.", 0, q.getQ());
-		learner.stop();
+
 		db.close();
 	}
 

@@ -11,4 +11,7 @@ public class ExponentialQualityMeasurement implements QualityMeasurement {
 		return Math.log(1 - Math.random()) / -rate;
 	}
 
+	public double getMean() {
+		return 1 / rate;
+	}
 }

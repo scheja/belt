@@ -106,10 +106,8 @@ public class LearnPartialChainIterator {
 			StateChain future = new StateChain(future1);
 			QValue q = new QValue(past, action, future);
 			SimpleQLearner sql = Main.getSQL();
+			sql.updateQ(url.toString(), q, 0.5, 0.5, true);
 
-			
-			// TODO: What is the correct Value?
-			sql.updateQ(url.toString(), q, 0.5, 0.5);
 			log.info("History 1 for URL: {}", s.toString());
 			log.info("Domain: {}, No. of Types: {}, No. of Props: {}", new Object[]{past1.getDomain(Main.getDB().getDictionary()), past1.getTypes(Main.getDB().getDictionary()).size(), past1.getProperties(Main.getDB().getDictionary()).size()});
 			log.info("Action for URL: {}", o.toString());

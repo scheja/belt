@@ -4,15 +4,12 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectRBTreeMap;
 import it.unimi.dsi.fastutil.objects.ObjectRBTreeSet;
 import it.unimi.dsi.fastutil.objects.ObjectSet;
-import it.unimi.dsi.fastutil.objects.ObjectSortedSet;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 
 import edu.kit.aifb.belt.db.Action;
@@ -21,7 +18,7 @@ import edu.kit.aifb.belt.db.QValue;
 import edu.kit.aifb.belt.db.State;
 import edu.kit.aifb.belt.db.StateChain;
 
-public class StateStore {
+public class SourceRanker {
 	/**
 	 * Convention: states inside the history have negative positions (The last
 	 * history state has position 0), states inside the future have positive
@@ -38,8 +35,8 @@ public class StateStore {
 	private int resultsForAveraging = 5;
 	private SimilarityCalculator similarityCalculator = new SimpleSimilarityCalculator();
 	private QCalculator qCalculator = new AverageQCalculator();
-
-	public StateStore(Database db) {
+	
+	public SourceRanker(Database db) {
 		this.db = db;
 		Iterator<QValue> iter = db.listAllQs();
 

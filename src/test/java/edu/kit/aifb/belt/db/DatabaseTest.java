@@ -127,6 +127,10 @@ public class DatabaseTest {
 			public double getQuality(int id) {
 				return quality;
 			}
+			
+			public double getMean() {
+				return 1.5;
+			}
 		});
 		
 		Node context = Node.createURI("quality.test");

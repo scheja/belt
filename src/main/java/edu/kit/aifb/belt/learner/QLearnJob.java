@@ -4,21 +4,23 @@ import edu.kit.aifb.belt.db.Action;
 import edu.kit.aifb.belt.db.StateChain;
 
 public class QLearnJob extends Job {
-	private String sourceURI;
-	private StateChain history;
-	private Action action;
-	private StateChain future;
-	private double learningRate;
-	private double discountFactor;
+	private final String sourceURI;
+	private final StateChain history;
+	private final Action action;
+	private final StateChain future;
+	private final double learningRate;
+	private final double discountFactor;
+	private final boolean reward;
 
 	public QLearnJob(String sourceURI, StateChain history, Action action, StateChain future, double learningRate,
-			double discountFactor) {
+			double discountFactor, boolean reward) {
 		this.sourceURI = sourceURI;
 		this.history = history;
 		this.action = action;
 		this.future = future;
 		this.learningRate = learningRate;
 		this.discountFactor = discountFactor;
+		this.reward = reward;
 	}
 
 	public String getSourceURI() {
@@ -43,5 +45,9 @@ public class QLearnJob extends Job {
 
 	public double getDiscountFactor() {
 		return discountFactor;
+	}
+
+	public boolean isReward() {
+		return reward;
 	}
 }
