@@ -8,16 +8,18 @@ import edu.kit.aifb.belt.db.QValue;
 public class SRResultValue implements Comparable<SRResultValue> {
 	private final EWAHCompressedBitmap[] props;
 	private final EWAHCompressedBitmap[] types;
+	private final int[] domains;
 	private final int futureOffset;
 	private final Action action;
 	private final double q;
 	
 	private double similarity;
 
-	public SRResultValue(EWAHCompressedBitmap[] props, EWAHCompressedBitmap[] types, int futureOffset, Action action,
+	public SRResultValue(EWAHCompressedBitmap[] props, EWAHCompressedBitmap[] types, int[] domains, int futureOffset, Action action,
 			double q) {
 		this.props = props;
 		this.types = types;
+		this.domains = domains;
 		this.futureOffset = futureOffset;
 		this.action = action;
 		this.q = q;
@@ -26,6 +28,7 @@ public class SRResultValue implements Comparable<SRResultValue> {
 	public SRResultValue(SRKey key, SRQValue value) {
 		props = value.getProps();
 		types = value.getTypes();
+		domains = value.getDomains();
 		futureOffset = value.getFutureOffset();
 		action = key.getPlainAction();
 		q = value.getQ();
@@ -37,6 +40,10 @@ public class SRResultValue implements Comparable<SRResultValue> {
 
 	public EWAHCompressedBitmap[] getTypes() {
 		return types;
+	}
+	
+	public int[] getDomains() {
+		return domains;
 	}
 
 	public int getFutureOffset() {

@@ -86,6 +86,8 @@ public class Timer {
 			pause();
 		}
 
+		started = false;
+		
 		long endNanos = System.nanoTime();
 
 		StringBuilder str = new StringBuilder();
