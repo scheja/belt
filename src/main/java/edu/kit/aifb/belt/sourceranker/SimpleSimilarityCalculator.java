@@ -27,7 +27,7 @@ public class SimpleSimilarityCalculator extends SimilarityCalculator {
 			typeSimilarity /= typeA.cardinality() + typeB.cardinality();
 
 			double domainSimilarity = domA == domB ? 1 / (propA.cardinality() + propB.cardinality()
-					+ typeA.cardinality() + typeB.cardinality()) : 0;
+					+ typeA.cardinality() + typeB.cardinality() + 1) : 0;
 
 			similarity += propSimilarity;
 			similarity += typeSimilarity;
