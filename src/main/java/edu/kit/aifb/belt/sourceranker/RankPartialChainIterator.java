@@ -111,7 +111,9 @@ public class RankPartialChainIterator {
 				
 		StateFactory statefactory = new StateFactory(Integer.MAX_VALUE, true);
 		List<State> history1list = statefactory.createState(ltbExecCxt.nodeDict.getNode(currentQueryPattern.s).getURI(), Main.getDB());
-		StateChain history = new StateChain(history1list);		
+		StateChain history = new StateChain(history1list);	
+		
+		System.out.println("History: H1: " + ltbExecCxt.nodeDict.getNode(currentQueryPattern.s).getURI());
 		
 		String actionProperty = ltbExecCxt.nodeDict.getNode(currentQueryPattern.p).getURI();
 		
@@ -146,11 +148,12 @@ public class RankPartialChainIterator {
 		System.out.println("Sorted Domains:");
 		for (RankedDomain r : rankedDomains) {
 			System.out.println(String.valueOf(r.getRank()) + ": " + r.getDomain());
+			List<Triple> triplesfromdomain = domain2triples.get(r.getDomain());
+			for (Triple t1 : triplesfromdomain) {
+				al.add(t1);
+			}
 		}
-		
-		for (Triple t : unranked) {
-			al.add(t);
-		}
+
 				
 	}
 
