@@ -1,5 +1,8 @@
 package edu.kit.aifb.belt.db;
 
+import it.unimi.dsi.fastutil.ints.IntRBTreeSet;
+import it.unimi.dsi.fastutil.ints.IntSet;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -28,6 +31,8 @@ import edu.kit.aifb.belt.db.dict.StringDictionary;
 import edu.kit.aifb.belt.db.dict.StringDictionary.Entry;
 import edu.kit.aifb.belt.db.quality.QualityMeasurement;
 import edu.kit.aifb.belt.db.quality.UniformQualityMeasurement;
+import edu.kit.aifb.belt.metrics.Metrics;
+import edu.kit.aifb.belt.metrics.Timer;
 import edu.kit.aifb.belt.sourceindex.SourceIndex;
 
 /**
@@ -39,6 +44,17 @@ public class Database implements SourceIndex, DictionaryListener {
 	private static final String DRIVER = "com.mysql.jdbc.Driver";
 
 	private static final int BATCH_SIZE = 100;
+
+	/** Size of a bitmap for a cardinality from 0 to 100. */
+	private static final int[] sizeMap = new int[] { 19, 27, 43, 58, 74, 89,
+			103, 118, 133, 147, 161, 175, 189, 202, 216, 229, 242, 255, 267,
+			280, 293, 305, 317, 329, 341, 353, 364, 375, 387, 398, 409, 420,
+			430, 441, 451, 462, 471, 482, 492, 501, 511, 520, 530, 539, 548,
+			558, 566, 575, 584, 593, 601, 609, 618, 626, 634, 642, 649, 657,
+			665, 673, 680, 687, 695, 702, 708, 715, 723, 730, 737, 743, 750,
+			756, 763, 768, 775, 781, 788, 793, 799, 805, 811, 816, 822, 828,
+			834, 838, 844, 849, 855, 860, 864, 869, 875, 880, 884, 889, 894,
+			899, 902, 907, 912 };
 
 	private String host;
 	private String database;
@@ -75,6 +91,9 @@ public class Database implements SourceIndex, DictionaryListener {
 
 	private long size;
 
+	private IntSet usedSources = new IntRBTreeSet();
+	private Timer sourceRetrievalTimer = new Timer();
+
 	/**
 	 * Gets all login info from the .password file.
 	 */
@@ -91,7 +110,8 @@ public class Database implements SourceIndex, DictionaryListener {
 			password = p.getProperty("password");
 
 			if (user == null || password == null) {
-				throw new DatabaseException("Password file needs a user and a password entry.");
+				throw new DatabaseException(
+						"Password file needs a user and a password entry.");
 			}
 		} catch (IOException e) {
 			throw new DatabaseException("Missing password file.", e);
@@ -121,8 +141,10 @@ public class Database implements SourceIndex, DictionaryListener {
 		try {
 			Class.forName(DRIVER);
 
-			connection = DriverManager.getConnection("jdbc:mysql://" + host + "/" + database
-					+ "?useUnicode=true&characterEncoding=utf-8", user, password);
+			connection = DriverManager.getConnection("jdbc:mysql://" + host
+					+ "/" + database
+					+ "?useUnicode=true&characterEncoding=utf-8", user,
+					password);
 
 			// Create tables
 			Statement stmt = connection.createStatement();
@@ -140,9 +162,11 @@ public class Database implements SourceIndex, DictionaryListener {
 					.prepareStatement("SELECT q, updateCount FROM QTable WHERE history = ? AND action = ? AND future = ?");
 			getBestActionQStatement = connection
 					.prepareStatement("SELECT q FROM QTable WHERE history = ? ORDER BY q DESC LIMIT 1");
-			listQStatement = connection.prepareStatement("SELECT history, action, future, q FROM QTable");
+			listQStatement = connection
+					.prepareStatement("SELECT history, action, future, q FROM QTable");
 
-			insertDictStatement = connection.prepareStatement("INSERT IGNORE INTO DictionaryTable VALUES (?, ?)");
+			insertDictStatement = connection
+					.prepareStatement("INSERT IGNORE INTO DictionaryTable VALUES (?, ?)");
 
 			insertQuadStatement = connection
 					.prepareStatement("INSERT INTO SourceIndexTable (subject, predicate, object, context) VALUES (?, ?, ?, ?)");
@@ -155,13 +179,17 @@ public class Database implements SourceIndex, DictionaryListener {
 			// replaceQuadContextStatement = connection
 			// .prepareStatement("UPDATE SourceIndexTable SET context = ? WHERE context = ?");
 
-			insertQualityStatement = connection.prepareStatement("INSERT IGNORE INTO QualityTable VALUES (?, ?)");
-			getQualityStatement = connection.prepareStatement("SELECT quality FROM QualityTable WHERE id = ?");
-			deleteQualityStatement = connection.prepareStatement("DELETE FROM QualityTable WHERE id = ?");
+			insertQualityStatement = connection
+					.prepareStatement("INSERT IGNORE INTO QualityTable VALUES (?, ?)");
+			getQualityStatement = connection
+					.prepareStatement("SELECT quality FROM QualityTable WHERE id = ?");
+			deleteQualityStatement = connection
+					.prepareStatement("DELETE FROM QualityTable WHERE id = ?");
 			incrementQualityStatement = connection
 					.prepareStatement("UPDATE QualityTable SET quality = quality + ? WHERE id = ?");
 
-			final ResultSet entries = stmt.executeQuery("SELECT id, value FROM DictionaryTable");
+			final ResultSet entries = stmt
+					.executeQuery("SELECT id, value FROM DictionaryTable");
 
 			dict = new StringDictionary(this);
 
@@ -170,12 +198,14 @@ public class Database implements SourceIndex, DictionaryListener {
 				protected Entry computeNext() {
 					try {
 						if (entries.next()) {
-							return dict.new Entry(entries.getInt(1), entries.getString(2));
+							return dict.new Entry(entries.getInt(1), entries
+									.getString(2));
 						} else {
 							return endOfData();
 						}
 					} catch (SQLException e) {
-						Logger.getLogger(getClass().getName()).log(Level.WARN, "Couldn't load dictionary", e);
+						Logger.getLogger(getClass().getName()).log(Level.WARN,
+								"Couldn't load dictionary", e);
 
 						return endOfData();
 					}
@@ -184,6 +214,8 @@ public class Database implements SourceIndex, DictionaryListener {
 
 			entries.close();
 			stmt.close();
+			
+			sourceRetrievalTimer.startPaused();
 		} catch (ClassNotFoundException e) {
 			throw new DatabaseException("Could not find driver: " + DRIVER, e);
 		} catch (SQLException e) {
@@ -191,6 +223,9 @@ public class Database implements SourceIndex, DictionaryListener {
 		}
 	}
 
+	/**
+	 * Closes connection to db and saves metrics.
+	 */
 	public void close() {
 		if (connection == null) {
 			return;
@@ -205,8 +240,18 @@ public class Database implements SourceIndex, DictionaryListener {
 			connection.close();
 			connection = null;
 		} catch (SQLException e) {
-			throw new DatabaseException("Could not close database connection", e);
+			throw new DatabaseException("Could not close database connection",
+					e);
 		}
+
+		sourceRetrievalTimer.stop();
+		
+		Metrics m = Metrics.getInstance();
+		m.setParameter("Index memory size (bytes)", (int) size);
+		m.setParameter("Sources used", usedSources.size());
+		m.saveTimer("Source retrieval time", sourceRetrievalTimer);
+
+		usedSources.clear();
 	}
 
 	public boolean isConnected(int timeout) {
@@ -255,10 +300,33 @@ public class Database implements SourceIndex, DictionaryListener {
 	}
 
 	public void updateQ(QValue q) {
-		updateQ(q.getHistory().getBytes(), q.getAction().getBytes(dict), q.getFuture().getBytes(), q.getQ());
+		int sizeIncrement = 0;
+		int staticSizeIncrement = 0;
+
+		for (State s : q.getHistory()) {
+			sizeIncrement += sizeMap[s.getProperties().length];
+			sizeIncrement += sizeMap[s.getTypes().length];
+
+			staticSizeIncrement = s.getProperties().length;
+			staticSizeIncrement = s.getTypes().length;
+		}
+
+		for (State s : q.getFuture()) {
+			sizeIncrement += sizeMap[s.getProperties().length];
+			sizeIncrement += sizeMap[s.getTypes().length];
+
+			staticSizeIncrement = s.getProperties().length;
+			staticSizeIncrement = s.getTypes().length;
+		}
+
+		sizeIncrement += 24 * staticSizeIncrement;
+
+		updateQ(q.getHistory().getBytes(), q.getAction().getBytes(dict), q
+				.getFuture().getBytes(), q.getQ(), sizeIncrement);
 	}
 
-	public void updateQ(byte[] history, byte[] action, byte[] future, double q) {
+	public void updateQ(byte[] history, byte[] action, byte[] future, double q,
+			int sizeIncrement) {
 		try {
 			getQStatement.setBytes(1, history);
 			getQStatement.setBytes(2, action);
@@ -276,7 +344,9 @@ public class Database implements SourceIndex, DictionaryListener {
 				int updateCount = updateQStatement.executeUpdate();
 
 				if (updateCount != 1) {
-					throw new DatabaseException("Updated a wrong number of rows: " + updateCount + " (should be: ");
+					throw new DatabaseException(
+							"Updated a wrong number of rows: " + updateCount
+									+ " (should be: ");
 				}
 			} else {
 				insertQStatement.setBytes(1, history);
@@ -287,9 +357,7 @@ public class Database implements SourceIndex, DictionaryListener {
 
 				insertQStatement.execute();
 
-				// Increase size: one int for the domain, bitset for type and
-				// properties.
-				size += 4;
+				size += sizeIncrement;
 			}
 
 			result.close();
@@ -299,7 +367,8 @@ public class Database implements SourceIndex, DictionaryListener {
 	}
 
 	public boolean getQ(QValue q) {
-		double newQ = getQ(q.getHistory().getBytes(), q.getAction().getBytes(dict), q.getFuture().getBytes());
+		double newQ = getQ(q.getHistory().getBytes(),
+				q.getAction().getBytes(dict), q.getFuture().getBytes());
 
 		if (Double.isNaN(newQ)) {
 			return false;
@@ -340,7 +409,8 @@ public class Database implements SourceIndex, DictionaryListener {
 	/**
 	 * Returns the best available q value for the given history.
 	 * 
-	 * @param history The history.
+	 * @param history
+	 *            The history.
 	 * @return The best available q value for the given history, or NaN, if no q
 	 *         value was found.
 	 */
@@ -390,11 +460,14 @@ public class Database implements SourceIndex, DictionaryListener {
 				protected QValue computeNext() {
 					try {
 						if (result.next()) {
-//							return new QValue(new StateChain(result.getBlob(1).getBinaryStream()), new Action(result
-//									.getBlob(2).getBinaryStream()), new StateChain(result.getBlob(3).getBinaryStream()), result.getDouble(4));
-							
-							return new QValue(new StateChain(new ByteArrayInputStream(result.getBytes(1))), new Action(result
-									.getBlob(2).getBinaryStream()), new StateChain(new ByteArrayInputStream(result.getBytes(3))), result.getDouble(4));
+							return new QValue(
+									new StateChain(new ByteArrayInputStream(
+											result.getBytes(1))),
+									new Action(result.getBlob(2)
+											.getBinaryStream()),
+									new StateChain(new ByteArrayInputStream(
+											result.getBytes(3))),
+									result.getDouble(4));
 						} else {
 							result.close();
 							return endOfData();
@@ -405,10 +478,12 @@ public class Database implements SourceIndex, DictionaryListener {
 						try {
 							result.close();
 						} catch (SQLException e1) {
-							throw new DatabaseException("Could not close result set.", e);
+							throw new DatabaseException(
+									"Could not close result set.", e);
 						}
 
-						throw new DatabaseException("Could not retrieve next q.", e);
+						throw new DatabaseException(
+								"Could not retrieve next q.", e);
 					}
 				}
 			};
@@ -430,16 +505,17 @@ public class Database implements SourceIndex, DictionaryListener {
 		if (connection == null) {
 			throw new IllegalStateException("Database is not connected.");
 		}
-		
+
 		return dict;
 	}
 
 	public synchronized void addQuad(Quad q) {
 		addQuad(q.getGraph(), q.getSubject(), q.getPredicate(), q.getObject());
 	}
-	
+
 	public synchronized void addQuad(Node g, Node s, Node p, Node o) {
-		addQuad(dict.getId(g.toString()), dict.getId(s.toString()), dict.getId(p.toString()), dict.getId(o.toString()));
+		addQuad(dict.getId(g.toString()), dict.getId(s.toString()),
+				dict.getId(p.toString()), dict.getId(o.toString()));
 	}
 
 	public synchronized void addQuad(int g, int s, int p, int o) {
@@ -470,8 +546,10 @@ public class Database implements SourceIndex, DictionaryListener {
 
 	public void deleteQuad(Quad q) {
 		try {
-			deleteQuadStatement.setInt(1, dict.getId(q.getSubject().toString()));
-			deleteQuadStatement.setInt(2, dict.getId(q.getPredicate().toString()));
+			deleteQuadStatement
+					.setInt(1, dict.getId(q.getSubject().toString()));
+			deleteQuadStatement.setInt(2,
+					dict.getId(q.getPredicate().toString()));
 			deleteQuadStatement.setInt(3, dict.getId(q.getObject().toString()));
 			deleteQuadStatement.setInt(4, dict.getId(q.getGraph().toString()));
 
@@ -485,16 +563,24 @@ public class Database implements SourceIndex, DictionaryListener {
 		Collection<Quad> result = new ArrayList<Quad>();
 
 		try {
-			getQuadByContextStatement.setInt(1, dict.getId(uri));
+			sourceRetrievalTimer.unpause();
+			
+			int uriId = dict.getId(uri);
+			usedSources.add(uriId);
+
+			getQuadByContextStatement.setInt(1, uriId);
 			ResultSet quads = getQuadByContextStatement.executeQuery();
 
 			while (quads.next()) {
-				result.add(new Quad(Node.createURI(dict.getString(quads.getInt(4))), Node.createURI(dict
-						.getString(quads.getInt(1))), Node.createURI(dict.getString(quads.getInt(2))), Node
-						.createURI(dict.getString(quads.getInt(3)))));
+				result.add(new Quad(Node.createURI(dict.getString(quads
+						.getInt(4))), Node.createURI(dict.getString(quads
+						.getInt(1))), Node.createURI(dict.getString(quads
+						.getInt(2))), Node.createURI(dict.getString(quads
+						.getInt(3)))));
 			}
 
 			quads.close();
+			sourceRetrievalTimer.pause();
 		} catch (SQLException e) {
 			throw new DatabaseException("Could not receive quads.", e);
 		}
@@ -523,7 +609,8 @@ public class Database implements SourceIndex, DictionaryListener {
 				ResultSet quads = getQuadByContextStatement.executeQuery();
 
 				while (quads.next()) {
-					addQuad(fromId, quads.getInt(1), quads.getInt(2), quads.getInt(3));
+					addQuad(fromId, quads.getInt(1), quads.getInt(2),
+							quads.getInt(3));
 				}
 			}
 
@@ -561,7 +648,7 @@ public class Database implements SourceIndex, DictionaryListener {
 			} else {
 				queryResult.close();
 				insertQuality(id);
-				
+
 				return getQuality(id);
 			}
 
@@ -595,7 +682,8 @@ public class Database implements SourceIndex, DictionaryListener {
 	public void dictionaryIdAdded() {
 		if (dict.getNewIdAmount() >= dictionaryFlushThreshold) {
 			flushDictionary();
-			Logger.getLogger(getClass()).log(Level.DEBUG, "Flushing dictionary. Size: " + dict.size());
+			Logger.getLogger(getClass()).log(Level.DEBUG,
+					"Flushing dictionary. Size: " + dict.size());
 		}
 	}
 
@@ -618,7 +706,8 @@ public class Database implements SourceIndex, DictionaryListener {
 				incrementQualityStatement.execute();
 			} else {
 				insertQualityStatement.setInt(1, id);
-				insertQualityStatement.setDouble(2, quality.getQuality(id) + increment);
+				insertQualityStatement.setDouble(2, quality.getQuality(id)
+						+ increment);
 
 				insertQualityStatement.execute();
 			}
@@ -628,7 +717,6 @@ public class Database implements SourceIndex, DictionaryListener {
 			throw new DatabaseException("Could not increment Quality.", e);
 		}
 	}
-
 
 	public QualityMeasurement getQualityMeasurement() {
 		return quality;

@@ -26,6 +26,39 @@ public class Timer {
 		log = Logger.getLogger(name);
 	}
 
+	public Timer() {
+		name = "";
+		log = null;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public long getStartNanos() {
+		return startNanos;
+	}
+
+	public long getLapNanos() {
+		return lapNanos;
+	}
+
+	public long getElapsedNanos() {
+		return elapsedNanos;
+	}
+
+	public long getLaps() {
+		return laps;
+	}
+
+	public boolean isStarted() {
+		return started;
+	}
+
+	public boolean isPaused() {
+		return paused;
+	}
+
 	public void start() {
 		if (started) {
 			throw new IllegalStateException("Timer already started");
@@ -86,21 +119,27 @@ public class Timer {
 			pause();
 		}
 
-		long endNanos = System.nanoTime();
+		if (log != null) {
+			long endNanos = System.nanoTime();
 
-		StringBuilder str = new StringBuilder();
+			StringBuilder str = new StringBuilder();
 
-		str.append("Timer '").append(name).append("': \n");
-		str.append("Total time: ").append(format(endNanos - startNanos)).append('\n');
-		str.append("Working time: ").append(format(elapsedNanos)).append('\n');
+			str.append("Timer '").append(name).append("': \n");
+			str.append("Total time: ").append(format(endNanos - startNanos))
+					.append('\n');
+			str.append("Working time: ").append(format(elapsedNanos))
+					.append('\n');
 
-		if (laps > 0) {
-			str.append("Lap count: ").append(laps).append('\n');
-			str.append("Average lap time: ").append(format(elapsedNanos / laps)).append('\n');
-			str.append("Average laps per second: ").append(laps * 1000000000 / elapsedNanos).append('\n');
+			if (laps > 0) {
+				str.append("Lap count: ").append(laps).append('\n');
+				str.append("Average lap time: ")
+						.append(format(elapsedNanos / laps)).append('\n');
+				str.append("Average laps per second: ")
+						.append(laps * 1000000000 / elapsedNanos).append('\n');
+			}
+
+			log.log(Level.INFO, str);
 		}
-
-		log.log(Level.INFO, str);
 	}
 
 	private String format(long time) {
@@ -130,7 +169,8 @@ public class Timer {
 		String number = String.valueOf(time / quotient);
 
 		if (number.length() > 3) {
-			number = number.substring(0, number.length() - 3) + "," + number.substring(number.length() - 3);
+			number = number.substring(0, number.length() - 3) + ","
+					+ number.substring(number.length() - 3);
 		}
 
 		return number + postFix;

@@ -7,11 +7,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 
 import edu.kit.aifb.belt.db.dict.StringDictionary;
 
-public class StateChain {
+public class StateChain implements Iterable<State> {
 	private List<State> states = new ArrayList<State>();
 
 	public StateChain(StateChain states) {
@@ -105,5 +106,9 @@ public class StateChain {
 		} else {
 			return false;
 		}
+	}
+
+	public Iterator<State> iterator() {
+		return states.iterator();
 	}
 }

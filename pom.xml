@@ -8,6 +8,12 @@
 	<description>Best-Effort Link-Traversal</description>
 	<dependencies>
 		<dependency>
+			<groupId>org.xerial</groupId>
+			<artifactId>sqlite-jdbc</artifactId>
+			<version>3.7.2</version>
+		</dependency>
+
+		<dependency>
 			<groupId>net.rootdev</groupId>
 			<artifactId>java-rdfa-htmlparser</artifactId>
 			<version>0.4.2</version>
