@@ -7,12 +7,14 @@ import com.googlecode.javaewah.EWAHCompressedBitmap;
 public class SRQValue {
 	private final EWAHCompressedBitmap[] props;
 	private final EWAHCompressedBitmap[] types;
+	private final int[] domains;
 	private final double q;
 	private final int futureOffset;
 	
-	public SRQValue(EWAHCompressedBitmap[] props, EWAHCompressedBitmap[] types, int futureOffset, double q) {
+	public SRQValue(EWAHCompressedBitmap[] props, EWAHCompressedBitmap[] types, int[] domains, int futureOffset, double q) {
 		this.props = types;
 		this.types = props;
+		this.domains = domains;
 		this.futureOffset = futureOffset;
 		this.q = q;
 	}
@@ -45,5 +47,9 @@ public class SRQValue {
 
 	public int getFutureOffset() {
 		return futureOffset;
+	}
+
+	public int[] getDomains() {
+		return domains;
 	}
 }
