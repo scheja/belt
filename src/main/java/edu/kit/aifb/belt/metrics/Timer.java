@@ -119,6 +119,8 @@ public class Timer {
 			pause();
 		}
 
+		started = false;
+
 		if (log != null) {
 			long endNanos = System.nanoTime();
 
