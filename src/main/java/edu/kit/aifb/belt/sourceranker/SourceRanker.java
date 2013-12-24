@@ -19,6 +19,7 @@ import edu.kit.aifb.belt.db.Database;
 import edu.kit.aifb.belt.db.QValue;
 import edu.kit.aifb.belt.db.State;
 import edu.kit.aifb.belt.db.StateChain;
+import edu.kit.aifb.belt.metrics.Metrics;
 import edu.kit.aifb.belt.metrics.Timer;
 
 public class SourceRanker {
@@ -256,6 +257,8 @@ public class SourceRanker {
 		}
 
 		similarityTimer.stop();
+		
+		Metrics.getInstance().saveTimer("Similarity calculation time (One lap is one state, one line is one ranking process)", similarityTimer);
 
 		Collections.sort(results, new SRResultValueSimilarityComparator());
 		List<SRResultValue> calculationMembers = results.subList(0, Math.min(resultsForAveraging, results.size()));
@@ -265,5 +268,7 @@ public class SourceRanker {
 	
 	public void stopTimers() {
 		rankingTimer.stop();
+		
+		Metrics.getInstance().saveTimer("Ranking Timer (One lap is one ranking process)", rankingTimer);
 	}
 }

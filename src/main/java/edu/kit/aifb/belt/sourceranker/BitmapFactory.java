@@ -1,5 +1,6 @@
 package edu.kit.aifb.belt.sourceranker;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -29,11 +30,17 @@ public class BitmapFactory {
 		result[0] = new EWAHCompressedBitmap();
 		result[1] = new EWAHCompressedBitmap();
 		
-		for (int prop : s.getProperties()) {
+		// Ensure arrays are sorted, otherwise bitmap will not set all bits (see EWAHCompressedBitmap.set(int)
+		int[] properties = s.getProperties();
+		int[] types = s.getTypes();
+		Arrays.sort(properties);
+		Arrays.sort(types);
+		
+		for (int prop : properties) {
 			result[0].set(propTranslator.getBitmap(prop));
 		}
 		
-		for (int type : s.getTypes()) {
+		for (int type : types) {
 			result[1].set(typeTranslator.getBitmap(type));
 		}
 		

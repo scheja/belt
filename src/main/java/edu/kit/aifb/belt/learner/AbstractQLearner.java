@@ -11,11 +11,12 @@ import edu.kit.aifb.belt.db.Action;
 import edu.kit.aifb.belt.db.Database;
 import edu.kit.aifb.belt.db.QValue;
 import edu.kit.aifb.belt.db.StateChain;
+import edu.kit.aifb.belt.metrics.Metrics;
 import edu.kit.aifb.belt.metrics.Timer;
 
 /**
- * Multithreading capable QLearner. Any number of threads can add jobs simultaneously. Jobs are executed by a single
- * thread.
+ * Multithreading capable QLearner. Any number of threads can add jobs
+ * simultaneously. Jobs are executed by a single thread.
  * 
  * @author sibbo
  */
@@ -28,6 +29,8 @@ public abstract class AbstractQLearner implements Runnable {
 	private Object stopLock = new Object();
 
 	public void run() {
+		Timer overallLearningTime = new Timer();
+		overallLearningTime.start();
 		Timer t = new Timer("learningTime");
 		t.startPaused();
 
@@ -41,16 +44,22 @@ public abstract class AbstractQLearner implements Runnable {
 
 						QLearnJob qJob = (QLearnJob) job;
 
-						updateQInternal(qJob.getSourceURI(), qJob.getHistory(), qJob.getAction(), qJob.getFuture(),
-								qJob.getLearningRate(), qJob.getDiscountFactor(), qJob.isReward());
+						updateQInternal(qJob.getSourceURI(), qJob.getHistory(),
+								qJob.getAction(), qJob.getFuture(),
+								qJob.getLearningRate(),
+								qJob.getDiscountFactor(), qJob.isReward());
 
 						t.pause();
 					} else {
-						Logger.getLogger(getClass()).log(Level.WARN, "Unknown Job type: " + job.getClass().getName());
+						Logger.getLogger(getClass())
+								.log(Level.WARN,
+										"Unknown Job type: "
+												+ job.getClass().getName());
 					}
 				}
 			} catch (InterruptedException e) {
-				Logger.getLogger(getClass()).log(Level.FATAL, "Polling interrupted.", e);
+				Logger.getLogger(getClass()).log(Level.FATAL,
+						"Polling interrupted.", e);
 			}
 		}
 
@@ -59,6 +68,11 @@ public abstract class AbstractQLearner implements Runnable {
 		}
 
 		t.stop();
+		overallLearningTime.stop();
+		
+		Metrics m = Metrics.getInstance();
+		m.setParameter("Learning time (Milliseconds)", (int) (overallLearningTime.getElapsedNanos() / 1000000));
+		
 		self = null;
 	}
 
@@ -90,6 +104,7 @@ public abstract class AbstractQLearner implements Runnable {
 
 	/**
 	 * Aborts the Q-learning thread. Blocks until the thread terminates.
+	 * Remaining QLearnJobs in the queue are not executed.
 	 */
 	public void abort() {
 		abort = true;
@@ -105,10 +120,12 @@ public abstract class AbstractQLearner implements Runnable {
 	}
 
 	/**
-	 * Schedules an update q operation. Blocks until free space in the queue is available.
+	 * Schedules an update q operation. Blocks until free space in the queue is
+	 * available.
 	 * 
 	 * @param sourceURI
-	 *            The uri of the state that is updated (Last state in the history)
+	 *            The uri of the state that is updated (Last state in the
+	 *            history)
 	 * @param history
 	 *            The state history. Entries should have a domain and a type.
 	 * @param action
@@ -116,19 +133,24 @@ public abstract class AbstractQLearner implements Runnable {
 	 * @param future
 	 *            The state future. Entries shouldn't have a domain, but a type.
 	 */
-	public void updateQ(String sourceURI, StateChain history, Action action, StateChain future, double learningRate,
-			double discountFactor, boolean reward) {
+	public void updateQ(String sourceURI, StateChain history, Action action,
+			StateChain future, double learningRate, double discountFactor,
+			boolean reward) {
 		if (!stop) {
 			try {
-				queue.put(new QLearnJob(sourceURI, history, action, future, learningRate, discountFactor, reward));
+				queue.put(new QLearnJob(sourceURI, history, action, future,
+						learningRate, discountFactor, reward));
 			} catch (InterruptedException e) {
-				Logger.getLogger(getClass()).log(Level.FATAL, "Putting interrupted.", e);
+				Logger.getLogger(getClass()).log(Level.FATAL,
+						"Putting interrupted.", e);
 			}
 		}
 	}
 
-	public void updateQ(String sourceURI, QValue q, double learningRate, double discountFactor, boolean reward) {
-		updateQ(sourceURI, q.getHistory(), q.getAction(), q.getFuture(), learningRate, discountFactor, reward);
+	public void updateQ(String sourceURI, QValue q, double learningRate,
+			double discountFactor, boolean reward) {
+		updateQ(sourceURI, q.getHistory(), q.getAction(), q.getFuture(),
+				learningRate, discountFactor, reward);
 	}
 
 	public double getRewardFromSourceURI(String sourceURI, Database db) {
@@ -149,6 +171,7 @@ public abstract class AbstractQLearner implements Runnable {
 	 * @param future
 	 *            The state future. Entries shouldn't have a domain, but a type.
 	 */
-	protected abstract void updateQInternal(String sourceURI, StateChain history, Action action, StateChain future,
+	protected abstract void updateQInternal(String sourceURI,
+			StateChain history, Action action, StateChain future,
 			double learningRate, double discountFactor, boolean reward);
 }
