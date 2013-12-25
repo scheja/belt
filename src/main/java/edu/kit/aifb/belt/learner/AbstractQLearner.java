@@ -10,6 +10,7 @@ import org.apache.log4j.Logger;
 import edu.kit.aifb.belt.db.Action;
 import edu.kit.aifb.belt.db.Database;
 import edu.kit.aifb.belt.db.QValue;
+import edu.kit.aifb.belt.db.Quality;
 import edu.kit.aifb.belt.db.StateChain;
 import edu.kit.aifb.belt.metrics.Metrics;
 import edu.kit.aifb.belt.metrics.Timer;
@@ -153,12 +154,12 @@ public abstract class AbstractQLearner implements Runnable {
 				learningRate, discountFactor, reward);
 	}
 
-	public double getRewardFromSourceURI(String sourceURI, Database db) {
+	public Quality getRewardFromSourceURI(String sourceURI, Database db) {
 		return db.getQuality(sourceURI);
 	}
 
-	public double getNegativeAverageReward(Database db) {
-		return -db.getQualityMeasurement().getMean();
+	public Quality getNegativeAverageReward(Database db) {
+		return db.getNegativeQuality();
 	}
 
 	/**

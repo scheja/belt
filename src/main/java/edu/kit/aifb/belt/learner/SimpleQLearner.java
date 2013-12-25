@@ -3,6 +3,7 @@ package edu.kit.aifb.belt.learner;
 import edu.kit.aifb.belt.db.Action;
 import edu.kit.aifb.belt.db.Database;
 import edu.kit.aifb.belt.db.QValue;
+import edu.kit.aifb.belt.db.Quality;
 import edu.kit.aifb.belt.db.State;
 import edu.kit.aifb.belt.db.StateChain;
 
@@ -11,22 +12,40 @@ public class SimpleQLearner extends AbstractQLearner {
 	private Database db;
 	private DatabaseListener listener;
 	private volatile boolean listenerInformed = false;
+	private QualityMeasurementType type;
 
-	public SimpleQLearner(long maxDbSize, Database db, DatabaseListener listener) {
+	public SimpleQLearner(long maxDbSize, Database db,
+			DatabaseListener listener, QualityMeasurementType type) {
 		this.maxDbSize = maxDbSize;
 		this.db = db;
 		this.listener = listener;
+		this.type = type;
 	}
 
 	protected void updateQInternal(String sourceURI, StateChain history,
 			Action action, StateChain future, double learningRate,
 			double discountFactor, boolean isReward) {
+		Quality quality;
 		double reward;
-		
+
 		if (isReward) {
-			reward = getRewardFromSourceURI(sourceURI, db);
+			quality = getRewardFromSourceURI(sourceURI, db);
 		} else {
-			reward = getNegativeAverageReward(db);
+			quality = getNegativeAverageReward(db);
+		}
+
+		switch (type) {
+		case UNIFORM:
+			reward = quality.getUniform();
+			break;
+		case NORMAL:
+			reward = quality.getNormal();
+			break;
+		case EXPONENTIAL:
+			reward = quality.getExponential();
+			break;
+		default:
+			throw new RuntimeException("Unknown quality type: " + type);
 		}
 
 		if (db.getSize() > maxDbSize) {

@@ -71,7 +71,7 @@ public class Main {
 				+ "    ?dbporg <http://dbpedia.org/property/city> ?city"
 				+ "}\n";
 		
-		sql = new SimpleQLearner(Long.MAX_VALUE, db, null);
+		sql = new SimpleQLearner(Long.MAX_VALUE, db, null, QualityMeasurementType.UNIFORM);
 		sql.start();		
 		
 		learnQuery(queryString2, db.getDictionary());		

@@ -25,6 +25,7 @@ import edu.kit.aifb.belt.db.State;
 import edu.kit.aifb.belt.db.StateChain;
 import edu.kit.aifb.belt.db.StateFactory;
 import edu.kit.aifb.belt.learner.AbstractQLearner;
+import edu.kit.aifb.belt.learner.QualityMeasurementType;
 import edu.kit.aifb.belt.learner.SimpleQLearner;
 
 public class SourceRankerTest {
@@ -62,7 +63,7 @@ public class SourceRankerTest {
 	public void testRanking() {
 		Database db = new Database();
 		db.connect();
-		AbstractQLearner learner = new SimpleQLearner(Long.MAX_VALUE, db, null);
+		AbstractQLearner learner = new SimpleQLearner(Long.MAX_VALUE, db, null, QualityMeasurementType.UNIFORM);
 		learner.start();
 
 		AbstractStateFactory sf = new StateFactory(2);

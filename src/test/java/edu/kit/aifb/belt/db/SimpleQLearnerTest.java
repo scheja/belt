@@ -12,6 +12,7 @@ import com.hp.hpl.jena.sparql.core.Quad;
 
 import edu.kit.aifb.belt.learner.AbstractQLearner;
 import edu.kit.aifb.belt.learner.DatabaseListener;
+import edu.kit.aifb.belt.learner.QualityMeasurementType;
 import edu.kit.aifb.belt.learner.SimpleQLearner;
 
 public class SimpleQLearnerTest implements DatabaseListener {
@@ -19,7 +20,7 @@ public class SimpleQLearnerTest implements DatabaseListener {
 	public void testQChanges() {
 		Database db = new Database();
 		db.connect();
-		AbstractQLearner learner = new SimpleQLearner(Long.MAX_VALUE, db, this);
+		AbstractQLearner learner = new SimpleQLearner(Long.MAX_VALUE, db, this, QualityMeasurementType.UNIFORM);
 		learner.start();
 
 		Set<String> humanSet = new HashSet<String>();

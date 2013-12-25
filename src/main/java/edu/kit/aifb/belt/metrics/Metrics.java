@@ -1,9 +1,7 @@
 package edu.kit.aifb.belt.metrics;
 
-import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.SimpleDateFormat;
@@ -26,13 +24,13 @@ public class Metrics {
 	private final Logger log = LogManager.getLogger(getClass());
 
 	private String file = "metrics - "
-			+ new SimpleDateFormat("yyyy.MM.dd HH:mm:ss").format(new Date(
+			+ new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date(
 					System.currentTimeMillis())) + ".db";
 	private Connection connection;
 	private Statement stmt;
 
-	private PreparedStatement updateParameterStatement;
-	private PreparedStatement insertParameterStatement;
+//	private PreparedStatement updateParameterStatement;
+//	private PreparedStatement insertParameterStatement;
 
 	private Set<String> metrics = new HashSet<String>();
 
@@ -50,10 +48,10 @@ public class Metrics {
 
 				stmt.execute("CREATE TABLE IF NOT EXISTS Parameters (name CHAR(256) PRIMARY KEY, value INT)");
 
-				updateParameterStatement = connection
-						.prepareStatement("UPDATE Parameters SET value = ? WHERE name = ?");
-				insertParameterStatement = connection
-						.prepareStatement("INSERT INTO Parameters (name, value) VALUES (?, ?)");
+//				updateParameterStatement = connection
+//						.prepareStatement("UPDATE Parameters SET value = ? WHERE name = ?");
+//				insertParameterStatement = connection
+//						.prepareStatement("INSERT INTO Parameters (name, value) VALUES (?, ?)");
 			} catch (ClassNotFoundException e) {
 				log.log(Level.FATAL, "No sqlite driver found!", e);
 			} catch (SQLException e) {
@@ -72,16 +70,19 @@ public class Metrics {
 		checkConnection();
 
 		try {
-			updateParameterStatement.setInt(1, value);
-			updateParameterStatement.setString(2, name);
+//			updateParameterStatement.setInt(1, value);
+//			updateParameterStatement.setString(2, name);
 
-			if (updateParameterStatement.executeUpdate() == 0) {
-				insertParameterStatement.setString(1, name);
-				insertParameterStatement.setInt(2, value);
-				insertParameterStatement.execute();
+			if (stmt.executeUpdate("UPDATE Parameters SET value = " + value + " WHERE name = '" + name + "'") == 0) {
+//				insertParameterStatement.setString(1, name);
+//				insertParameterStatement.setInt(2, value);
+//				insertParameterStatement.execute();
+				stmt.execute("INSERT INTO Parameters (name, value) VALUES ('" + name + "', " + value + ")");
 			}
+			
+			
 		} catch (SQLException e) {
-			log.log(Level.FATAL, "Could not execute query!", e);
+			log.log(Level.FATAL, "Could not execute query! name: " + name + ", value: " + value, e);
 		}
 	}
 

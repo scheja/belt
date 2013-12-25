@@ -4,8 +4,12 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 
 import org.junit.AfterClass;
@@ -119,32 +123,32 @@ public class DatabaseTest {
 		assertEquals("Wrong number of quads found with new uri.", 1, size);
 	}
 
-	@Test
-	public void testQuality() {
-		final double quality = Math.random() + 1;
-
-		db.setQualityMeasurement(new QualityMeasurement() {
-			public double getQuality(int id) {
-				return quality;
-			}
-			
-			public double getMean() {
-				return 1.5;
-			}
-		});
-		
-		Node context = Node.createURI("quality.test");
-		
-		db.deleteQuality(context);
-		db.deleteQuad(new Quad(context, Node.createURI("s"), Node.createURI("p"), Node.createURI("o")));
-		db.addQuad(context, Node.createURI("s"), Node.createURI("p"), Node.createURI("o"));
-		
-		assertEquals("The quality was not inserted correctly.", quality, db.getQuality(context), 1e-10);
-		
-		db.incrementQuality(context.toString(), 0.33);
-		
-		assertEquals("The quality was no incremented correctly.", quality + 0.33, db.getQuality(context), 1e-10);
-	}
+//	@Test
+//	public void testQuality() {
+//		final double quality = Math.random() + 1;
+//
+//		db.setQualityMeasurement(new QualityMeasurement() {
+//			public double getQuality(int id) {
+//				return quality;
+//			}
+//			
+//			public double getMean() {
+//				return 1.5;
+//			}
+//		});
+//		
+//		Node context = Node.createURI("quality.test");
+//		
+//		db.deleteQuality(context);
+//		db.deleteQuad(new Quad(context, Node.createURI("s"), Node.createURI("p"), Node.createURI("o")));
+//		db.addQuad(context, Node.createURI("s"), Node.createURI("p"), Node.createURI("o"));
+//		
+//		assertEquals("The quality was not inserted correctly.", quality, db.getQuality(context), 1e-10);
+//		
+//		db.incrementQuality(context.toString(), 0.33);
+//		
+//		assertEquals("The quality was no incremented correctly.", quality + 0.33, db.getQuality(context), 1e-10);
+//	}
 	
 	@Test
 	public void testListQ() {
@@ -187,6 +191,21 @@ public class DatabaseTest {
 		assertEquals("Wrong amount of x found", 1, xCount);
 		assertEquals("Wrong amount of y found", 1, yCount);
 	}
+	
+	@Test
+	public void testQueryTable() {
+		String query = "BlaBlub";
+		List<String> results = new ArrayList<String>();
+		results.add("ResultHighRank");
+		results.add("ResultLowRank");
+		
+		db.insertQueryResults(query, results.iterator());
+		List<String> dbResult = db.getQueryResults(query);
+		
+		assertTrue("Wrong results. Should: " + Arrays.toString(results.toArray()) + ", Is: " + Arrays.toString(dbResult.toArray()), Arrays.equals(results.toArray(), dbResult.toArray()));
+		
+		db.deleteQueryResults(query);
+	}
 
 	private int iteratorSize(@SuppressWarnings("rawtypes") Iterator i) {
 		int size = 0;
@@ -198,6 +217,8 @@ public class DatabaseTest {
 
 		return size;
 	}
+	
+	
 
 	@AfterClass
 	public static void tearDownAfterClass() {

@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
@@ -29,6 +30,8 @@ import com.hp.hpl.jena.sparql.core.Quad;
 import edu.kit.aifb.belt.db.dict.DictionaryListener;
 import edu.kit.aifb.belt.db.dict.StringDictionary;
 import edu.kit.aifb.belt.db.dict.StringDictionary.Entry;
+import edu.kit.aifb.belt.db.quality.ExponentialQualityMeasurement;
+import edu.kit.aifb.belt.db.quality.NormalQualityMeasurement;
 import edu.kit.aifb.belt.db.quality.QualityMeasurement;
 import edu.kit.aifb.belt.db.quality.UniformQualityMeasurement;
 import edu.kit.aifb.belt.metrics.Metrics;
@@ -80,14 +83,30 @@ public class Database implements SourceIndex, DictionaryListener {
 	private PreparedStatement insertQualityStatement;
 	private PreparedStatement getQualityStatement;
 	private PreparedStatement deleteQualityStatement;
-	private PreparedStatement incrementQualityStatement;
+	private PreparedStatement getMaxUQualityStatement;
+	private PreparedStatement getMaxNQualityStatement;
+	private PreparedStatement getMaxEQualityStatement;
+	private PreparedStatement normalizeQualitiesStatement;
+	// private PreparedStatement incrementQualityStatement;
+
+	private PreparedStatement insertQueryStatement;
+	private PreparedStatement insertQueryResultStatement;
+	private PreparedStatement getQueryResultsStatement;
+	private PreparedStatement deleteQueryStatement;
+	private PreparedStatement deleteQueryResultsStatement;
 
 	private StringDictionary dict;
 	private int dictionaryFlushThreshold = Integer.MAX_VALUE;
 
 	private Map<String, String> redirections = new HashMap<String, String>();
 
-	private QualityMeasurement quality = new UniformQualityMeasurement();
+	private QualityMeasurement uniformQuality = new UniformQualityMeasurement(
+			0, 2);
+	private QualityMeasurement normalQuality = new NormalQualityMeasurement(1,
+			1);
+	private QualityMeasurement exponentialQuality = new ExponentialQualityMeasurement(
+			1);
+	private Quality negativeQuality = new Quality(-0.5, -0.5, -0.5);
 
 	private long size;
 
@@ -151,7 +170,9 @@ public class Database implements SourceIndex, DictionaryListener {
 			stmt.execute("CREATE TABLE IF NOT EXISTS QTable (id INT PRIMARY KEY AUTO_INCREMENT, history BLOB, action BLOB, future BLOB, q DOUBLE, updateCount INT, INDEX (history(254), action(254), future(254)), INDEX (history(254))) DEFAULT CHARSET=utf8");
 			stmt.execute("CREATE TABLE IF NOT EXISTS DictionaryTable (id INT PRIMARY KEY, value TEXT, INDEX (value(254))) DEFAULT CHARSET=utf8");
 			stmt.execute("CREATE TABLE IF NOT EXISTS SourceIndexTable (id INT PRIMARY KEY AUTO_INCREMENT, subject INT, predicate INT, object INT, context INT, INDEX (context)) DEFAULT CHARSET=utf8");
-			stmt.execute("CREATE TABLE IF NOT EXISTS QualityTable (id INT PRIMARY KEY, quality DOUBLE)");
+			stmt.execute("CREATE TABLE IF NOT EXISTS QualityTable (id INT PRIMARY KEY, uniformQuality DOUBLE, originalUniformQuality DOUBLE, normalQuality DOUBLE, originalNormalQuality DOUBLE, exponentialQuality DOUBLE, originalExponentialQuality DOUBLE, INDEX(uniformQuality), INDEX(normalQuality), INDEX(exponentialQuality))");
+			stmt.execute("CREATE TABLE IF NOT EXISTS QueryTable (id INT PRIMARY KEY AUTO_INCREMENT, query TEXT)");
+			stmt.execute("CREATE TABLE IF NOT EXISTS QueryResultTable (id INT PRIMARY KEY AUTO_INCREMENT, query INT, rank INT, result TEXT)");
 
 			insertQStatement = connection
 					.prepareStatement("INSERT INTO QTable (history, action, future, q, updateCount) VALUES (?, ?, ?, ?, ?)");
@@ -180,13 +201,30 @@ public class Database implements SourceIndex, DictionaryListener {
 			// .prepareStatement("UPDATE SourceIndexTable SET context = ? WHERE context = ?");
 
 			insertQualityStatement = connection
-					.prepareStatement("INSERT IGNORE INTO QualityTable VALUES (?, ?)");
+					.prepareStatement("INSERT IGNORE INTO QualityTable VALUES (?, ?, ?, ?, ?, ?, ?)");
 			getQualityStatement = connection
-					.prepareStatement("SELECT quality FROM QualityTable WHERE id = ?");
+					.prepareStatement("SELECT uniformQuality, normalQuality, exponentialQuality FROM QualityTable WHERE id = ?");
 			deleteQualityStatement = connection
 					.prepareStatement("DELETE FROM QualityTable WHERE id = ?");
-			incrementQualityStatement = connection
-					.prepareStatement("UPDATE QualityTable SET quality = quality + ? WHERE id = ?");
+			getMaxUQualityStatement = connection
+					.prepareStatement("SELECT MAX(uniformQuality) FROM QualityTable");
+			getMaxNQualityStatement = connection
+					.prepareStatement("SELECT MAX(normalQuality) FROM QualityTable");
+			getMaxEQualityStatement = connection
+					.prepareStatement("SELECT MAX(exponentialQuality) FROM QualityTable");
+			normalizeQualitiesStatement = connection
+					.prepareStatement("UPDATE QualityTable SET uniformQuality = originalUniformQuality / ?, normalQuality = originalNormalQuality / ?, exponentialQuality = originalExponentialQuality / ?");
+			// incrementQualityStatement = connection
+			// .prepareStatement("UPDATE QualityTable SET quality = quality + ? WHERE id = ?");
+
+			insertQueryStatement = connection
+					.prepareStatement("INSERT INTO QueryTable (query) VALUES (?)");
+			insertQueryResultStatement = connection
+					.prepareStatement("INSERT INTO QueryResultTable (query, rank, result) VALUES ((SELECT id FROM QueryTable WHERE query = ?), ?, ?)");
+			getQueryResultsStatement = connection
+					.prepareStatement("SELECT QueryResultTable.rank, QueryResultTable.result FROM QueryTable, QueryResultTable WHERE QueryTable.query = ? AND QueryResultTable.query = QueryTable.id ORDER BY QueryResultTable.rank ASC");
+			deleteQueryStatement = connection.prepareStatement("DELETE FROM QueryTable WHERE query = ?");
+			deleteQueryResultsStatement = connection.prepareStatement("DELETE FROM QueryResultTable WHERE query = (SELECT id FROM QueryTable WHERE query = ?)");
 
 			final ResultSet entries = stmt
 					.executeQuery("SELECT id, value FROM DictionaryTable");
@@ -214,7 +252,7 @@ public class Database implements SourceIndex, DictionaryListener {
 
 			entries.close();
 			stmt.close();
-			
+
 			sourceRetrievalTimer.startPaused();
 		} catch (ClassNotFoundException e) {
 			throw new DatabaseException("Could not find driver: " + DRIVER, e);
@@ -245,7 +283,7 @@ public class Database implements SourceIndex, DictionaryListener {
 		}
 
 		sourceRetrievalTimer.stop();
-		
+
 		Metrics m = Metrics.getInstance();
 		m.setParameter("Index memory size (bytes)", (int) size);
 		m.setParameter("Sources used", usedSources.size());
@@ -564,7 +602,7 @@ public class Database implements SourceIndex, DictionaryListener {
 
 		try {
 			sourceRetrievalTimer.unpause();
-			
+
 			int uriId = dict.getId(uri);
 			usedSources.add(uriId);
 
@@ -626,8 +664,17 @@ public class Database implements SourceIndex, DictionaryListener {
 
 	private void insertQuality(int id) {
 		try {
+			double uQuality = uniformQuality.getQuality(id);
+			double nQuality = normalQuality.getQuality(id);
+			double eQuality = exponentialQuality.getQuality(id);
+
 			insertQualityStatement.setInt(1, id);
-			insertQualityStatement.setDouble(2, quality.getQuality(id));
+			insertQualityStatement.setDouble(2, uQuality);
+			insertQualityStatement.setDouble(3, uQuality);
+			insertQualityStatement.setDouble(4, nQuality);
+			insertQualityStatement.setDouble(5, nQuality);
+			insertQualityStatement.setDouble(6, eQuality);
+			insertQualityStatement.setDouble(7, eQuality);
 
 			insertQualityStatement.execute();
 		} catch (SQLException e) {
@@ -635,15 +682,16 @@ public class Database implements SourceIndex, DictionaryListener {
 		}
 	}
 
-	public double getQuality(int id) {
+	public Quality getQuality(int id) {
 		try {
 			getQualityStatement.setInt(1, id);
 
 			ResultSet queryResult = getQualityStatement.executeQuery();
-			double result = 0;
+			Quality result;
 
 			if (queryResult.next()) {
-				result = queryResult.getDouble(1);
+				result = new Quality(queryResult.getDouble(1),
+						queryResult.getDouble(2), queryResult.getDouble(3));
 				queryResult.close();
 			} else {
 				queryResult.close();
@@ -658,11 +706,11 @@ public class Database implements SourceIndex, DictionaryListener {
 		}
 	}
 
-	public double getQuality(Node n) {
+	public Quality getQuality(Node n) {
 		return getQuality(dict.getId(n));
 	}
 
-	public double getQuality(String uri) {
+	public Quality getQuality(String uri) {
 		return getQuality(dict.getId(uri));
 	}
 
@@ -687,38 +735,146 @@ public class Database implements SourceIndex, DictionaryListener {
 		}
 	}
 
-	public void setQualityMeasurement(QualityMeasurement qualityMeasurement) {
-		quality = qualityMeasurement;
-	}
+	// public void setQualityMeasurement(QualityMeasurement qualityMeasurement)
+	// {
+	// quality = qualityMeasurement;
+	// }
 
-	public void incrementQuality(String url, double increment) {
-		incrementQuality(dict.getId(url), increment);
-	}
+	// public void incrementQuality(String url, double increment) {
+	// incrementQuality(dict.getId(url), increment);
+	// }
 
-	public void incrementQuality(int id, double increment) {
+	// public void incrementQuality(int id, double increment) {
+	// try {
+	// getQualityStatement.setInt(1, id);
+	// ResultSet queryResult = getQualityStatement.executeQuery();
+	//
+	// if (queryResult.next()) {
+	// incrementQualityStatement.setDouble(1, increment);
+	// incrementQualityStatement.setInt(2, id);
+	// incrementQualityStatement.execute();
+	// } else {
+	// insertQualityStatement.setInt(1, id);
+	// insertQualityStatement.setDouble(2, quality.getQuality(id)
+	// + increment);
+	//
+	// insertQualityStatement.execute();
+	// }
+	//
+	// queryResult.close();
+	// } catch (SQLException e) {
+	// throw new DatabaseException("Could not increment Quality.", e);
+	// }
+	// }
+	//
+	// public QualityMeasurement getQualityMeasurement() {
+	// return quality;
+	// }
+
+	public void normalizeQualities() {
 		try {
-			getQualityStatement.setInt(1, id);
-			ResultSet queryResult = getQualityStatement.executeQuery();
+			double uQuality = 1;
+			double nQuality = 1;
+			double eQuality = 1;
 
-			if (queryResult.next()) {
-				incrementQualityStatement.setDouble(1, increment);
-				incrementQualityStatement.setInt(2, id);
-				incrementQualityStatement.execute();
-			} else {
-				insertQualityStatement.setInt(1, id);
-				insertQualityStatement.setDouble(2, quality.getQuality(id)
-						+ increment);
+			ResultSet result = getMaxUQualityStatement.executeQuery();
 
-				insertQualityStatement.execute();
+			if (result.next()) {
+				uQuality = result.getDouble(1);
 			}
 
-			queryResult.close();
+			result.close();
+			result = getMaxNQualityStatement.executeQuery();
+
+			if (result.next()) {
+				nQuality = result.getDouble(1);
+			}
+
+			result.close();
+			result = getMaxEQualityStatement.executeQuery();
+
+			if (result.next()) {
+				eQuality = result.getDouble(1);
+			}
+
+			result.close();
+
+			negativeQuality = new Quality(-1 / uQuality, -1 / nQuality, -1
+					/ eQuality);
+
+			normalizeQualitiesStatement.setDouble(1, uQuality);
+			normalizeQualitiesStatement.setDouble(2, nQuality);
+			normalizeQualitiesStatement.setDouble(3, eQuality);
+			normalizeQualitiesStatement.execute();
 		} catch (SQLException e) {
-			throw new DatabaseException("Could not increment Quality.", e);
+			throw new DatabaseException("Could not normalize qualities.", e);
 		}
 	}
 
-	public QualityMeasurement getQualityMeasurement() {
-		return quality;
+	/**
+	 * You should normalize qualities before doing this.
+	 * 
+	 * @return
+	 */
+	public Quality getNegativeQuality() {
+		return negativeQuality;
+	}
+
+	/**
+	 * Only call one time per query!
+	 * 
+	 * @param query
+	 * @param results
+	 */
+	public void insertQueryResults(String query, Iterator<String> results) {
+		try {
+			insertQueryStatement.setString(1, query);
+			insertQueryStatement.execute();
+
+			int rank = 0;
+
+			while (results.hasNext()) {
+				for (int i = 0; i < BATCH_SIZE && results.hasNext(); i++) {
+					rank++;
+					insertQueryResultStatement.setString(1, query);
+					insertQueryResultStatement.setInt(2, rank);
+					insertQueryResultStatement.setString(3, results.next());
+					insertQueryResultStatement.addBatch();
+				}
+
+				insertQueryResultStatement.executeBatch();
+			}
+		} catch (SQLException e) {
+			throw new DatabaseException("Could not insert query results", e);
+		}
+	}
+
+	public List<String> getQueryResults(String query) {
+		try {
+			getQueryResultsStatement.setString(1, query);
+			ResultSet queryResults = getQueryResultsStatement.executeQuery();
+			List<String> result = new ArrayList<String>();
+
+			while (queryResults.next()) {
+				result.add(queryResults.getString(2));
+			}
+
+			queryResults.close();
+			return result;
+		} catch (SQLException e) {
+			throw new DatabaseException("Could not fetch query results", e);
+		}
+	}
+	
+	public void deleteQueryResults(String query) {
+		try {
+			deleteQueryResultsStatement.setString(1, query);
+			deleteQueryResultsStatement.execute();
+			
+			deleteQueryStatement.setString(1, query);
+			deleteQueryStatement.execute();
+		} catch (SQLException e) {
+			throw new DatabaseException("Could not delete query results", e);
+		}
 	}
 }
