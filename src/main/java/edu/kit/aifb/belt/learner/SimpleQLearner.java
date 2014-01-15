@@ -47,9 +47,10 @@ public class SimpleQLearner extends AbstractQLearner {
 		// Get q. If it doesn't exist, it will be 0.
 		db.getQ(q);
 
-		StateChain newHistory = new StateChain(history);
+		// Create new state list.
+		StateChain newHistory = new StateChain(future.getStateList().get(0));
 		// Add first element of future states.
-		newHistory.getStateList().add(future.getStateList().get(0));
+		//newHistory.getStateList().add(future.getStateList().get(0));
 
 		double bestFutureQ = db.getBestQ(newHistory);
 
