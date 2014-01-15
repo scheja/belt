@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
+import org.apache.commons.math.stat.descriptive.SummaryStatistics;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -127,25 +128,25 @@ public class DatabaseTest {
 			public double getQuality(int id) {
 				return quality;
 			}
-			
+
 			public double getMean() {
 				return 1.5;
 			}
 		});
-		
+
 		Node context = Node.createURI("quality.test");
-		
+
 		db.deleteQuality(context);
 		db.deleteQuad(new Quad(context, Node.createURI("s"), Node.createURI("p"), Node.createURI("o")));
 		db.addQuad(context, Node.createURI("s"), Node.createURI("p"), Node.createURI("o"));
-		
+
 		assertEquals("The quality was not inserted correctly.", quality, db.getQuality(context), 1e-10);
-		
+
 		db.incrementQuality(context.toString(), 0.33);
-		
+
 		assertEquals("The quality was no incremented correctly.", quality + 0.33, db.getQuality(context), 1e-10);
 	}
-	
+
 	@Test
 	public void testListQ() {
 		Set<String> aSet = new HashSet<String>();
@@ -159,33 +160,65 @@ public class DatabaseTest {
 				"future1", "future2"), new State("a", aSet, db.getDictionary(), "futurex"), new State("a", aSet,
 				db.getDictionary(), "futurey")), 3);
 
-		QValue y = new QValue(new StateChain(new State("y", aSet, db.getDictionary(), "pafcsast2", "pasteca1"), new State("arfeca",
-				aSet, db.getDictionary(), "pastx"), new State("a", aSet, db.getDictionary(), "pasty")), new Action(
-				"abc.de", "knows", db.getDictionary()), new StateChain(new State("a", aSet, db.getDictionary(),
-				"future2", "futurfxdsae1"), new State("a", aSet, db.getDictionary(), "futurexfsda"), new State("a", aSet,
-				db.getDictionary(), "futurey")), 2);
-		
+		QValue y = new QValue(new StateChain(new State("y", aSet, db.getDictionary(), "pafcsast2", "pasteca1"),
+				new State("arfeca", aSet, db.getDictionary(), "pastx"), new State("a", aSet, db.getDictionary(),
+						"pasty")), new Action("abc.de", "knows", db.getDictionary()), new StateChain(new State("a",
+				aSet, db.getDictionary(), "future2", "futurfxdsae1"), new State("a", aSet, db.getDictionary(),
+				"futurexfsda"), new State("a", aSet, db.getDictionary(), "futurey")), 2);
+
 		db.updateQ(x);
 		db.updateQ(y);
-		
+
 		int xCount = 0;
 		int yCount = 0;
-		
-		
+
 		for (Iterator<QValue> i = db.listAllQs(); i.hasNext();) {
-			 QValue q = i.next();
-			 
-			 if (q.equals(x)) {
-				 xCount++;
-			 }
-			 
-			 if (q.equals(y)) {
-				 yCount++;
-			 }
+			QValue q = i.next();
+
+			if (q.equals(x)) {
+				xCount++;
+			}
+
+			if (q.equals(y)) {
+				yCount++;
+			}
 		}
+
+		assertEquals("Wrong amount of x found.", 1, xCount);
+		assertEquals("Wrong amount of y found.", 1, yCount);
+	}
+
+	@Test
+	public void testStatistics() {
+		Set<String> aSet = new HashSet<String>();
+		aSet.add("a");
+		Set<String> pasfsdSet = new HashSet<String>();
+		pasfsdSet.add("pasfsd");
+
+		SummaryStatistics statistics = new SummaryStatistics();
+
+		for (int i = 0; i < 1000; i++) {
+			statistics.addValue(Math.random());
+		}
+
+		QValue x = new QValue(new StateChain(new State("a", aSet, db.getDictionary(), "past1", "past2"), new State("a",
+				aSet, db.getDictionary(), "pastx"), new State("a", aSet, db.getDictionary(), "pasty")), new Action(
+				"abc.de", "knows", db.getDictionary()), new StateChain(new State("a", aSet, db.getDictionary(),
+				"future1", "future2"), new State("a", aSet, db.getDictionary(), "futurex"), new State("a", aSet,
+				db.getDictionary(), "futurey")), 3, statistics);
 		
-		assertEquals("Wrong amount of x found", 1, xCount);
-		assertEquals("Wrong amount of y found", 1, yCount);
+		QValue y = new QValue(x);
+		y.setStatistics(null);
+		y.setQ(-6526346);
+		
+		db.deleteQ(x);
+		db.updateQ(x);
+		db.getQ(y);
+		db.deleteQ(x);
+		
+		System.out.println(db.serialize(x.getStatistics()).length);
+		
+		assertEquals("QValues not equal.", x, y);
 	}
 
 	private int iteratorSize(@SuppressWarnings("rawtypes") Iterator i) {

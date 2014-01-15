@@ -4,8 +4,11 @@ import it.unimi.dsi.fastutil.ints.IntRBTreeSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -19,6 +22,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
 
+import org.apache.commons.math.stat.descriptive.SummaryStatistics;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
@@ -65,6 +69,7 @@ public class Database implements SourceIndex, DictionaryListener {
 	private PreparedStatement insertQStatement;
 	private PreparedStatement updateQStatement;
 	private PreparedStatement clearQStatement;
+	private PreparedStatement deleteQStatement;
 	private PreparedStatement getQStatement;
 	private PreparedStatement getBestActionQStatement;
 	private PreparedStatement listQStatement;
@@ -148,22 +153,23 @@ public class Database implements SourceIndex, DictionaryListener {
 
 			// Create tables
 			Statement stmt = connection.createStatement();
-			stmt.execute("CREATE TABLE IF NOT EXISTS QTable (id INT PRIMARY KEY AUTO_INCREMENT, history BLOB, action BLOB, future BLOB, q DOUBLE, updateCount INT, INDEX (history(254), action(254), future(254)), INDEX (history(254))) DEFAULT CHARSET=utf8");
+			stmt.execute("CREATE TABLE IF NOT EXISTS QTable (id INT PRIMARY KEY AUTO_INCREMENT, history BLOB, action BLOB, future BLOB, q DOUBLE, statistics BLOB, updateCount INT, INDEX (history(254), action(254), future(254)), INDEX (history(254))) DEFAULT CHARSET=utf8");
 			stmt.execute("CREATE TABLE IF NOT EXISTS DictionaryTable (id INT PRIMARY KEY, value TEXT, INDEX (value(254))) DEFAULT CHARSET=utf8");
 			stmt.execute("CREATE TABLE IF NOT EXISTS SourceIndexTable (id INT PRIMARY KEY AUTO_INCREMENT, subject INT, predicate INT, object INT, context INT, INDEX (context)) DEFAULT CHARSET=utf8");
 			stmt.execute("CREATE TABLE IF NOT EXISTS QualityTable (id INT PRIMARY KEY, quality DOUBLE)");
 
 			insertQStatement = connection
-					.prepareStatement("INSERT INTO QTable (history, action, future, q, updateCount) VALUES (?, ?, ?, ?, ?)");
+					.prepareStatement("INSERT INTO QTable (history, action, future, q, statistics, updateCount) VALUES (?, ?, ?, ?, ?, ?)");
 			updateQStatement = connection
-					.prepareStatement("UPDATE QTable SET q = ?, updateCount = ? WHERE history = ? AND action = ? AND future = ?");
+					.prepareStatement("UPDATE QTable SET q = ?, statistics = ?, updateCount = ? WHERE history = ? AND action = ? AND future = ?");
 			clearQStatement = connection.prepareStatement("DELETE FROM QTable");
+			deleteQStatement = connection.prepareStatement("DELETE FROM QTable WHERE history = ? AND action = ? AND future = ?");
 			getQStatement = connection
-					.prepareStatement("SELECT q, updateCount FROM QTable WHERE history = ? AND action = ? AND future = ?");
+					.prepareStatement("SELECT q, statistics, updateCount FROM QTable WHERE history = ? AND action = ? AND future = ?");
 			getBestActionQStatement = connection
 					.prepareStatement("SELECT q FROM QTable WHERE history = ? ORDER BY q DESC LIMIT 1");
 			listQStatement = connection
-					.prepareStatement("SELECT history, action, future, q FROM QTable");
+					.prepareStatement("SELECT history, action, future, q, statistics FROM QTable");
 
 			insertDictStatement = connection
 					.prepareStatement("INSERT IGNORE INTO DictionaryTable VALUES (?, ?)");
@@ -322,24 +328,28 @@ public class Database implements SourceIndex, DictionaryListener {
 		sizeIncrement += 24 * staticSizeIncrement;
 
 		updateQ(q.getHistory().getBytes(), q.getAction().getBytes(dict), q
-				.getFuture().getBytes(), q.getQ(), sizeIncrement);
+				.getFuture().getBytes(), q.getQ(), sizeIncrement, q);
 	}
 
 	public void updateQ(byte[] history, byte[] action, byte[] future, double q,
-			int sizeIncrement) {
+			int sizeIncrement, QValue qValue) {
 		try {
 			getQStatement.setBytes(1, history);
 			getQStatement.setBytes(2, action);
 			getQStatement.setBytes(3, future);
 
 			ResultSet result = getQStatement.executeQuery();
-
+			
 			if (result.next()) {
+				SummaryStatistics statistics = (SummaryStatistics) deserialize(result.getBytes(2));
+				statistics.addValue(q);
+				
 				updateQStatement.setDouble(1, q);
-				updateQStatement.setInt(2, result.getInt(2));
-				updateQStatement.setBytes(3, history);
-				updateQStatement.setBytes(4, action);
-				updateQStatement.setBytes(5, future);
+				updateQStatement.setBytes(2, serialize(statistics));
+				updateQStatement.setInt(3, result.getInt(3) + 1);
+				updateQStatement.setBytes(4, history);
+				updateQStatement.setBytes(5, action);
+				updateQStatement.setBytes(6, future);
 
 				int updateCount = updateQStatement.executeUpdate();
 
@@ -349,11 +359,24 @@ public class Database implements SourceIndex, DictionaryListener {
 									+ " (should be: ");
 				}
 			} else {
+				SummaryStatistics statistics= null;
+				
+				if (qValue != null) {
+					if (qValue.getStatistics() != null) {
+						statistics = qValue.getStatistics();
+					}
+				}
+				
+				if (statistics == null) {
+					statistics = new SummaryStatistics();
+				}
+				
 				insertQStatement.setBytes(1, history);
 				insertQStatement.setBytes(2, action);
 				insertQStatement.setBytes(3, future);
 				insertQStatement.setDouble(4, q);
-				insertQStatement.setInt(5, 0);
+				insertQStatement.setBytes(5, serialize(statistics));
+				insertQStatement.setInt(6, 0);
 
 				insertQStatement.execute();
 
@@ -362,13 +385,51 @@ public class Database implements SourceIndex, DictionaryListener {
 
 			result.close();
 		} catch (SQLException e) {
-			throw new DatabaseException("Could not update Q values.", e);
+			throw new DatabaseException("Could not update Q value.", e);
+		}
+	}
+	
+	public void deleteQ(byte[] history, byte[] action, byte[] future) {
+		try {
+			deleteQStatement.setBytes(1, history);
+			deleteQStatement.setBytes(2, action);
+			deleteQStatement.setBytes(3, future);
+
+			deleteQStatement.execute();
+		} catch (SQLException e) {
+			throw new DatabaseException("Could not delete Q value.", e);
+		}
+	}
+	
+	public void deleteQ(QValue q) {
+		deleteQ(q.getHistory().getBytes(), q.getAction().getBytes(dict), q.getFuture().getBytes());
+	}
+
+	public Object deserialize(byte[] bytes) {
+		try {
+			ByteArrayInputStream in = new ByteArrayInputStream(bytes);
+			ObjectInputStream objIn = new ObjectInputStream(in);
+			return objIn.readObject();
+		} catch (Exception e) {
+			throw new DatabaseException("Could not deserialize object", e);
+		}
+	}
+
+	public byte[] serialize(Object o) {
+		try {
+			ByteArrayOutputStream out = new ByteArrayOutputStream();
+			ObjectOutputStream objOut = new ObjectOutputStream(out);
+			objOut.writeObject(o);
+			objOut.flush();
+			return out.toByteArray();
+		} catch (IOException e) {
+			throw new DatabaseException("Could not serialize object", e);
 		}
 	}
 
 	public boolean getQ(QValue q) {
 		double newQ = getQ(q.getHistory().getBytes(),
-				q.getAction().getBytes(dict), q.getFuture().getBytes());
+				q.getAction().getBytes(dict), q.getFuture().getBytes(), q);
 
 		if (Double.isNaN(newQ)) {
 			return false;
@@ -384,7 +445,7 @@ public class Database implements SourceIndex, DictionaryListener {
 	 * 
 	 * @return True if the q value was found in the database, false otherwise.
 	 */
-	public double getQ(byte[] history, byte[] action, byte[] future) {
+	public double getQ(byte[] history, byte[] action, byte[] future, QValue qValue) {
 		try {
 			getQStatement.setBytes(1, history);
 			getQStatement.setBytes(2, action);
@@ -394,6 +455,11 @@ public class Database implements SourceIndex, DictionaryListener {
 
 			if (result.next()) {
 				double q = result.getDouble(1);
+				
+				if (qValue != null) {
+					qValue.setQ(q);
+					qValue.setStatistics((SummaryStatistics) deserialize(result.getBytes(2)));
+				}
 
 				result.close();
 				return q;

@@ -44,8 +44,10 @@ public class SimpleQLearner extends AbstractQLearner {
 		}
 
 		QValue q = new QValue(history, action, future);
-		// Get q. If it doesn't exist, it will be 0.
-		db.getQ(q);
+		// Get q. If it doesn't exist, it will be reward.
+		if (!db.getQ(q)) {
+			q.setQ(reward);
+		}
 
 		// Create new state list.
 		StateChain newHistory = new StateChain(future.getStateList().get(0));

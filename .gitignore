@@ -3,6 +3,7 @@
 /tdb/*
 .DS_Store
 .password
+*.db
 =======
 .password
 
